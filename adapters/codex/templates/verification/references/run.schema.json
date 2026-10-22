@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Devkit verification run",
+  "description": "A revision-specific record of one behavioral verification attempt.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "task",
+    "workflow",
+    "feature_id",
+    "repository",
+    "started_at",
+    "finished_at",
+    "elapsed_seconds",
+    "status",
+    "environment",
+    "checks",
+    "retry_count",
+    "human_intervention_count"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "run_id": { "type": "string", "minLength": 1 },
+    "task": { "type": "string", "minLength": 1 },
+    "workflow": { "type": "string", "minLength": 1 },
+    "feature_id": { "type": ["string", "null"] },
+    "repository": {
+      "type": "object",
+      "required": ["root", "head_sha", "worktree_dirty"],
+      "properties": {
+        "root": { "type": "string", "minLength": 1 },
+        "head_sha": { "type": "string", "pattern": "^[0-9a-fA-F]{7,64}$" },
+        "worktree_dirty": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "started_at": { "type": "string", "format": "date-time" },
+    "finished_at": { "type": "string", "format": "date-time" },
+    "elapsed_seconds": { "type": "number", "minimum": 0 },
+    "status": {
+      "type": "string",
+      "enum": ["PASS", "FAIL", "BLOCKED", "MANUAL_VERIFICATION_REQUIRED"]
+    },
+    "environment": {
+      "type": "object",
+      "required": ["surface"],
+      "properties": {
+        "surface": {
+          "type": "string",
+          "enum": ["browser", "api", "cli", "service", "other"]
+        },
+        "target": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "status", "expected", "actual", "evidence"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "status": {
+            "type": "string",
+            "enum": ["PASS", "FAIL", "NOT_RUN", "BLOCKED", "MANUAL_VERIFICATION_REQUIRED"]
+          },
+          "expected": { "type": "string" },
+          "actual": { "type": "string" },
+          "evidence": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "retry_count": { "type": "integer", "minimum": 0 },
+    "human_intervention_count": { "type": "integer", "minimum": 0 },
+    "notes": { "type": "string" }
+  },
+  "additionalProperties": false
+}

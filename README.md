@@ -34,7 +34,7 @@ The Orchestrator reads the workflow catalog, loads the matching playbook, and de
 
 The highest-value setup in each product repository is a small, reusable way to start the app, check that it is ready, exercise a real user or API path, capture evidence, and clean up only resources created for the run. Keep a short feature map that links important user paths to the observable result that proves each path works. Prefer existing project tools over creating a new control layer.
 
-The Codex adapter installs role and workflow instructions; it does not create this product-specific verification setup. If a required behavior cannot be exercised, the workflow must report the verification gap instead of treating a build or source inspection as proof.
+The Codex adapter installs a generic verification skill and feature template. Each product repository must document its own launch/readiness commands and completed feature scenarios. If a required behavior cannot be exercised, the workflow must report the verification gap instead of treating a build or source inspection as proof.
 
 ## Status and inspiration
 

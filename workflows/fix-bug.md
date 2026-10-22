@@ -79,6 +79,7 @@ Orchestrator supplies the failure evidence, expected behavior, identified mechan
 ## 5. Independently verify the latest artifact — Tester
 
 - Verify the **current code revision/commit** against the original discriminator and acceptance criteria on the relevant execution surface. Use the original failing repro, or another independently discriminating failure signal when an exact repro is impossible.
+- With the Codex adapter, read `.agents/skills/devkit-verify/SKILL.md` and the matching completed feature document before running the scenario. `feature.template.md` is an authoring scaffold, not a verification case.
 - Run focused regression checks and relevant adjacent behavior checks. Record commands, results, screenshots/logs/artifacts, environment, and revision.
 - Return `PASS`, `FAIL`, or `BLOCKED`. `PASS` requires behavior evidence appropriate to the defect; source inspection, green CI, or a verbal assurance alone is insufficient.
 - If verification cannot distinguish before from after, return `BLOCKED` with reason `INCONCLUSIVE` to Orchestrator; do not mark the patch fixed.

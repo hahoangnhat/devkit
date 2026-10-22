@@ -20,8 +20,17 @@ WORKFLOW_FILES = (
     "refactor.md",
     "maintenance.md",
 )
+VERIFICATION_FILES = (
+    "SKILL.md",
+    "features/README.md",
+    "features/feature.template.md",
+    "references/run.schema.json",
+)
 BEGIN = "<!-- devkit:codex:start -->"
 END = "<!-- devkit:codex:end -->"
+RUNS_IGNORE_BEGIN = "# devkit:codex:runs-ignore:start"
+RUNS_IGNORE_END = "# devkit:codex:runs-ignore:end"
+RUNS_IGNORE_SECTION = f"{RUNS_IGNORE_BEGIN}\n/runs/\n{RUNS_IGNORE_END}"
 
 
 def role_body(path: Path) -> str:
@@ -75,8 +84,9 @@ When the user explicitly asks to use Devkit for engineering work, the **main Cod
 1. Read `.devkit/agents/orchestrator.md` in full. Read `.devkit/workflows/README.md` to route the request, then read the chosen existing workflow in full (for bug reports: `.devkit/workflows/fix-bug.md`). Paths referenced as `agents/...` and `workflows/...` inside Devkit instructions are rooted at `.devkit/`.
 2. Follow repository instructions and the actual Codex permission/sandbox policy. Do not assume Devkit can override them. Do not edit application code as Orchestrator.
 3. Delegate required specialist stages using **actual Codex subagents**: `devkit_tester`, `devkit_developer`, and `devkit_reviewer`, registered in `.codex/agents/`. Give each a self-contained brief with scope, acceptance, verification, prohibited actions, relevant evidence, and the applicable workflow path.
-4. Let Tester assess the expected behavior before asking Developer to change code. Skip unnecessary code edits, Developer, or Reviewer on supported no-change paths as the workflow permits. Use current-artifact evidence for every completion claim.
-5. Collect subagent outputs and independently decide the task disposition. If delegation or a required check is unavailable, say `BLOCKED` rather than imitating a subagent or claiming tests passed. Never invent a PR, approval, commit, or successful test.
+4. When behavioral verification is required, read `.agents/skills/devkit-verify/SKILL.md` if installed and use the matching feature document under its `features/` directory. `feature.template.md` is an authoring scaffold, not evidence that a feature was verified.
+5. Let Tester assess the expected behavior before asking Developer to change code. Skip unnecessary code edits, Developer, or Reviewer on supported no-change paths as the workflow permits. Use current-artifact evidence for every completion claim.
+6. Collect subagent outputs and independently decide the task disposition. If delegation or a required check is unavailable, say `BLOCKED` rather than imitating a subagent or claiming tests passed. Never invent a PR, approval, commit, or successful test.
 
 These instructions apply to explicit Devkit requests; ordinary project work retains its existing behavior. The specialist role TOMLs are generated from the same canonical Devkit Markdown sources.
 <!-- devkit:codex:end -->"""
@@ -88,6 +98,10 @@ def expected_files() -> dict[Path, str]:
         files[Path(".devkit/agents") / f"{role}.md"] = (DEVKIT_ROOT / "agents" / f"{role}.md").read_text(encoding="utf-8")
     for name in WORKFLOW_FILES:
         files[Path(".devkit/workflows") / name] = (DEVKIT_ROOT / "workflows" / name).read_text(encoding="utf-8")
+    verification_root = DEVKIT_ROOT / "adapters/codex/templates/verification"
+    install_root = Path(".agents/skills/devkit-verify")
+    for name in VERIFICATION_FILES:
+        files[install_root / name] = (verification_root / name).read_text(encoding="utf-8")
     for role in SUBAGENTS:
         files[Path(".codex/agents") / f"devkit_{role}.toml"] = role_toml(role)
     return files
@@ -105,6 +119,22 @@ def merge_agents(existing: str) -> str:
     if existing and not existing.endswith("\n"):
         existing += "\n"
     return existing + ("\n" if existing else "") + AGENTS_SECTION + "\n"
+
+
+def merge_devkit_gitignore(existing: str) -> str:
+    starts, ends = existing.count(RUNS_IGNORE_BEGIN), existing.count(RUNS_IGNORE_END)
+    if starts or ends:
+        if starts != 1 or ends != 1 or existing.index(RUNS_IGNORE_BEGIN) > existing.index(RUNS_IGNORE_END):
+            raise ValueError(".devkit/.gitignore contains incomplete or duplicated Devkit markers")
+        current_block = existing[
+            existing.index(RUNS_IGNORE_BEGIN) : existing.index(RUNS_IGNORE_END) + len(RUNS_IGNORE_END)
+        ]
+        if current_block != RUNS_IGNORE_SECTION:
+            raise ValueError(".devkit/.gitignore has a modified/older Devkit block; refusing to overwrite it")
+        return existing
+    if existing and not existing.endswith("\n"):
+        existing += "\n"
+    return existing + ("\n" if existing else "") + RUNS_IGNORE_SECTION + "\n"
 
 
 def assert_no_symlinks(root: Path, relative: Path) -> None:
@@ -130,6 +160,17 @@ def install(repo: Path, check: bool) -> None:
         raise ValueError("AGENTS.md is not UTF-8") from exc
     wanted[Path("AGENTS.md")] = merge_agents(existing_agents)
 
+    devkit_gitignore = repo / ".devkit/.gitignore"
+    devkit_gitignore_relative = Path(".devkit/.gitignore")
+    assert_no_symlinks(repo, devkit_gitignore_relative)
+    if devkit_gitignore.exists() and not devkit_gitignore.is_file():
+        raise ValueError(f"Existing path is not a regular file: {devkit_gitignore}")
+    try:
+        existing_gitignore = devkit_gitignore.read_text(encoding="utf-8") if devkit_gitignore.exists() else ""
+    except UnicodeDecodeError as exc:
+        raise ValueError(".devkit/.gitignore is not UTF-8") from exc
+    wanted[devkit_gitignore_relative] = merge_devkit_gitignore(existing_gitignore)
+
     # Preflight every target before writing ANY file: never overwrite user files.
     changed: list[tuple[Path, str]] = []
     for relative, content in wanted.items():
@@ -140,10 +181,10 @@ def install(repo: Path, check: bool) -> None:
                 raise ValueError(f"Existing path is not a regular file: {dest}")
             original = dest.read_text(encoding="utf-8")
             if original != content:
-                if relative != Path("AGENTS.md"):
+                if relative not in (Path("AGENTS.md"), devkit_gitignore_relative):
                     raise ValueError(f"Conflict: {dest}; no files installed. Review/remove the conflicting path manually")
-                # Only AGENTS.md may be appended to; merge_agents already checked
-                # that any existing managed block is unmodified.
+                # These files may receive only their intact managed block;
+                # their merge functions preserve all surrounding user content.
                 changed.append((dest, content))
         else:
             changed.append((dest, content))

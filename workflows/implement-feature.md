@@ -47,7 +47,7 @@ If implementation reveals a missing product decision, a different root-cause bug
 
 ## 4. Verify the latest behavior — Tester
 
-Tester independently checks the latest artifact against every acceptance criterion on the matching execution surface. Reuse the target project's verification commands and feature map where present; capture the exact revision, environment, actions/commands, outcomes, and artifacts.
+Tester independently checks the latest artifact against every acceptance criterion on the matching execution surface. Reuse the target project's verification commands and feature map where present. With the Codex adapter, read `.agents/skills/devkit-verify/SKILL.md` and the matching completed feature document before running the scenario; `feature.template.md` is not a test case. Capture the exact revision, environment, actions/commands, outcomes, and artifacts.
 
 **PASS** requires evidence of the requested observable behavior. Type checks, source inspection, or a green test unrelated to the acceptance criteria are not enough. If the real surface or required data is unavailable, report **BLOCKED** with the missing prerequisite. Do not imply a manual or simulated check was automated.
 

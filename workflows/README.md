@@ -20,7 +20,7 @@ Devkit adapts pstack's public engineering lessons to its own roles and Codex ada
 
 Prompts should state the goal, how to tell it is done, useful known context, and real constraints. Do not enumerate roles or prescribe a tool sequence unless the request intentionally overrides the workflow.
 
-Each product repository should provide, where feasible, a reusable verification path for launch/readiness, driving a real feature, collecting evidence, and cleanup, plus a feature map of user paths and their observable success criteria. Reuse existing tests and control tools. If a required surface is unavailable, report that gap as **BLOCKED** or **NOT_RUN**, not as a pass. The Codex adapter does not supply product-specific verification tooling.
+Each product repository should provide, where feasible, a reusable verification path for launch/readiness, driving a real feature, collecting evidence, and cleanup, plus a feature map of user paths and their observable success criteria. Reuse existing tests and control tools. If a required surface is unavailable, report that gap as **BLOCKED** or **NOT_RUN**, not as a pass. The Codex adapter supplies a generic skill and feature template; product-specific commands and completed scenarios stay in the product repository.
 
 ## Initial catalog
 

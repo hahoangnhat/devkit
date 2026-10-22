@@ -11,12 +11,13 @@ python3 adapters/codex/install.py --check /absolute/path/to/your-repo
 python3 adapters/codex/install.py /absolute/path/to/your-repo
 ```
 
-The installer copies only the necessary Markdown and generates:
+The installer copies the role/workflow instructions and verification resources, then generates:
 
 ```text
 your-repo/
 ├── AGENTS.md                     # adds a marked Devkit section; keeps existing content
 ├── .devkit/
+│   ├── .gitignore                 # marked rule excludes generated runs/
 │   ├── agents/
 │   │   ├── orchestrator.md
 │   │   ├── tester.md
@@ -30,12 +31,21 @@ your-repo/
 │       ├── review-change.md
 │       ├── refactor.md
 │       └── maintenance.md
+├── .agents/
+│   └── skills/devkit-verify/
+│       ├── SKILL.md
+│       ├── features/
+│       │   ├── README.md
+│       │   └── feature.template.md
+│       └── references/run.schema.json
 └── .codex/
     └── agents/
         ├── devkit_tester.toml
         ├── devkit_developer.toml
         └── devkit_reviewer.toml
 ```
+
+The skill and feature template are generic. In the target project, copy `feature.template.md` to `features/<feature-id>.md` and fill in the real setup, steps, expected results, evidence, and cleanup. The skill writes each run's `run.json` and artifacts to `.devkit/runs/<run-id>/`; this directory is ignored by the managed `.devkit/.gitignore` rule.
 
 **Start a fresh Codex session from your repository root** (the project instruction chain is read at session startup):
 
@@ -60,11 +70,11 @@ In Codex CLI, `/subagents` shows spawned agent threads. If no subagents appear w
 
 ## Safety and limits
 
-- Installer is **idempotent**: rerunning on unchanged files is a no-op. It checks every path first, keeps existing `AGENTS.md` content and refuses conflicting files or modified managed sections rather than overwriting them. There is no `--force` flag.
+- Installer is **idempotent**: rerunning on unchanged files is a no-op. It checks every path first, keeps existing `AGENTS.md` and `.devkit/.gitignore` content, and refuses conflicting files or modified managed sections rather than overwriting them. There is no `--force` flag.
 - It will fail if the root has `AGENTS.override.md`, since Codex would ignore the root `AGENTS.md`. Resolve manually for now.
 - It does **not** change `.codex/config.toml`, model selections, approvals, or sandbox settings. Subagents inherit permissions from the main Codex session. **Read-only instructions for Tester and Reviewer are not a technical read-only sandbox**: use appropriate project permissions and review changes yourself.
 - It does not invoke or authenticate Codex, and there is no automatic upgrade/uninstall mechanism yet. For future Devkit changes, compare and intentionally replace generated files; conflicting reruns are rejected.
-- It does not create the target product's verification harness or feature map. Add a small reusable way to launch/check readiness, exercise the real feature, capture evidence, and clean up in each target repository where feasible.
+- It installs a generic verification skill and feature template. Each product repository still needs completed feature documents with its actual launch/readiness commands, behavior steps, expected results, and cleanup instructions.
 - It does not install missing external tools or guarantee the target app can run. The workflow must report `BLOCKED` when tests or runtime surfaces are unavailable.
 - This adapter is **Draft**, not production-validated. Integration on a real repository is still required.
 
