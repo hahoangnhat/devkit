@@ -24,7 +24,12 @@ your-repo/
 │   │   └── reviewer.md
 │   └── workflows/
 │       ├── README.md
-│       └── fix-bug.md
+│       ├── fix-bug.md
+│       ├── investigate.md
+│       ├── implement-feature.md
+│       ├── review-change.md
+│       ├── refactor.md
+│       └── maintenance.md
 └── .codex/
     └── agents/
         ├── devkit_tester.toml
@@ -39,13 +44,13 @@ cd /absolute/path/to/your-repo
 codex
 ```
 
-For a first read-only smoke test, ask:
+For a first read-only routing smoke test, ask:
 
-> Use Devkit. Read the Orchestrator instructions and the Fix Bug workflow, list the three registered Devkit specialist roles, and explain how you would investigate a hypothetical bug. Do not edit files, run tests, or spawn agents.
+> Use Devkit to investigate how [a behavior] works. Read the Orchestrator instructions, workflow catalog, and selected playbook. Return an evidence-backed explanation with file references. Do not edit files, run tests, or spawn agents.
 
-For a real test when you're ready, ask:
+For a real task after choosing a project, name the requested outcome and let the catalog route it:
 
-> Use Devkit to investigate and fix this bug: [steps, observed behavior, expected behavior, environment]. Delegate to devkit_tester, devkit_developer and devkit_reviewer only when their stages are justified by the workflow. Do not merge or deploy.
+> Use Devkit to [investigate / implement a feature / review a change / refactor / perform maintenance]: [scope, expected outcome, constraints]. Read the selected workflow and delegate only the stages it requires. Do not merge or deploy.
 
 In Codex CLI, `/subagents` shows spawned agent threads. If no subagents appear when explicitly requested, verify project trust, that `agents.enabled` has not been disabled, and that the Codex version supports project-scoped `.codex/agents/*.toml`.
 

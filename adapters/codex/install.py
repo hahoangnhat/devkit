@@ -11,7 +11,15 @@ import tomllib
 DEVKIT_ROOT = Path(__file__).resolve().parents[2]
 ROLE_FILES = ("orchestrator", "tester", "developer", "reviewer")
 SUBAGENTS = ("tester", "developer", "reviewer")
-WORKFLOW_FILES = ("README.md", "fix-bug.md")
+WORKFLOW_FILES = (
+    "README.md",
+    "fix-bug.md",
+    "investigate.md",
+    "implement-feature.md",
+    "review-change.md",
+    "refactor.md",
+    "maintenance.md",
+)
 BEGIN = "<!-- devkit:codex:start -->"
 END = "<!-- devkit:codex:end -->"
 

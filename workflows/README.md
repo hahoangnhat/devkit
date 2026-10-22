@@ -1,21 +1,27 @@
 # Devkit Workflow Catalog
 
-Status: **Design registry — not a claim of runtime readiness**.
+Status: **All cataloged workflows have authored playbooks. They remain Draft until representative runtime runs prove the gates below.**
 
 ## Purpose
 
 List the everyday engineering outcomes Devkit intends to support. Keep the roles in `agents/` reusable and the task-specific sequence, evidence, and exit criteria in each `workflows/*.md` file. Do not put each workflow's stage order into `agents/orchestrator.md`.
 
+## Design principles
+
+The owner built Devkit's workflow system as an independent approach tailored to this repository. Its routing, roles, handoffs, outcomes, evidence gates, readiness criteria, and authorization boundaries are defined by Devkit's own contracts and conventions.
+
+The playbooks aim to make each task's expected behavior and completion evidence clear, keep changes bounded and verifiable, assign ownership explicitly, and stop when the workflow lacks evidence or authorization to continue. They do not claim compatibility with another workflow system.
+
 ## Initial catalog
 
 | Workflow | Use when | Expected deliverable | State |
 | --- | --- | --- | --- |
-| `fix-bug.md` | Correct a reported defect | Reproduction, fix, regression evidence, review | **Draft** (file exists; untested end-to-end) |
-| `investigate.md` | Explain behavior, diagnose a problem, or explore feasibility without modifying code | Findings, cited code references, uncertainties, next action | Planned |
-| `implement-feature.md` | Introduce or change product behavior | Scoped implementation, behavior verification, review | Planned |
-| `review-change.md` | Review a PR/diff without implementing changes | Findings with severity, concrete evidence, and decision | Planned |
-| `refactor.md` | Improve structure while preserving externally observable behavior | Changed code, behavior-parity evidence, review | Planned |
-| `maintenance.md` | Update tests, docs, dependencies, or tooling | Bounded maintenance change, specific checks, review if needed | Planned |
+| `fix-bug.md` | Correct a reported defect | Reproduction, fix or evidence-backed no-change result, verification, review | **Draft** (authored; runtime validation pending) |
+| `investigate.md` | Explain behavior, diagnose a problem, or assess feasibility without modifying code | Evidence-backed answer, cited references, uncertainties, next action | **Draft** (authored; runtime validation pending) |
+| `implement-feature.md` | Introduce or intentionally change product behavior | Scoped implementation, behavior verification, review | **Draft** (authored; runtime validation pending) |
+| `review-change.md` | Review a specified change without implementing it | Findings with severity, evidence, and review disposition | **Draft** (authored; runtime validation pending) |
+| `refactor.md` | Improve structure while preserving observable behavior | Named target shape, behavior-parity evidence, review | **Draft** (authored; runtime validation pending) |
+| `maintenance.md` | Update tests, docs, dependencies, or tooling | Bounded change, specific checks, risk-based review | **Draft** (authored; runtime validation pending) |
 
 ## Routing principles
 
@@ -36,9 +42,8 @@ A workflow moves through **Planned → Draft → Tested → Ready**, never direc
 
 ## Incremental delivery order
 
-1. **Now:** Maintain this catalog and validate `fix-bug.md` with one real issue-to-verified-result run once the required agents and adapter exist.
-2. **Next workflow to author:** `investigate.md` (read-only, low-risk, useful for many requests).
-3. **Then:** `implement-feature.md` (first new code-producing workflow).
-4. **Later:** `review-change.md`, `refactor.md`, then `maintenance.md`, each with its own evaluation before marking Ready.
+1. **Authoring:** The six playbooks listed above are present and ready for review as workflow definitions.
+2. **Runtime validation:** After installing into the chosen project, run representative tasks through the matching adapter. Save the exact artifact revision, verification evidence, and at least one blocked or failure case for each workflow that uses those stages.
+3. **Readiness:** Update a workflow from Draft to Tested only after a real delegated run demonstrates the documented handoffs and gates. Mark it Ready only after repeatable runs support its claims.
 
-Do not write all workflow files in advance. Keep this catalog synchronized with actual tested capabilities, not aspirations.
+Keep this catalog synchronized with observed adapter capabilities, not aspirations. Document review alone does not establish runtime readiness.
