@@ -8,9 +8,19 @@ List the everyday engineering outcomes Devkit intends to support. Keep the roles
 
 ## Design principles
 
-The owner built Devkit's workflow system as an independent approach tailored to this repository. Its routing, roles, handoffs, outcomes, evidence gates, readiness criteria, and authorization boundaries are defined by Devkit's own contracts and conventions.
+Devkit adapts pstack's public engineering lessons to its own roles and Codex adapter; it is not a copy of the Cursor plugin. The workflow is designed around:
 
-The playbooks aim to make each task's expected behavior and completion evidence clear, keep changes bounded and verifiable, assign ownership explicitly, and stop when the workflow lacks evidence or authorization to continue. They do not claim compatibility with another workflow system.
+- A clear user outcome and observable done check; the Orchestrator selects the playbook.
+- Repeatable evidence on the real product before increasing parallelism.
+- One owner per change surface and specialist handoffs only when they add independent value.
+- Repeated lessons encoded in code, checks, or reusable project tools instead of repeated chat instructions.
+- Rigor proportional to the task's risk; agent count and PR volume are not success metrics.
+
+## Prompting and project verification
+
+Prompts should state the goal, how to tell it is done, useful known context, and real constraints. Do not enumerate roles or prescribe a tool sequence unless the request intentionally overrides the workflow.
+
+Each product repository should provide, where feasible, a reusable verification path for launch/readiness, driving a real feature, collecting evidence, and cleanup, plus a feature map of user paths and their observable success criteria. Reuse existing tests and control tools. If a required surface is unavailable, report that gap as **BLOCKED** or **NOT_RUN**, not as a pass. The Codex adapter does not supply product-specific verification tooling.
 
 ## Initial catalog
 
@@ -42,8 +52,8 @@ A workflow moves through **Planned → Draft → Tested → Ready**, never direc
 
 ## Incremental delivery order
 
-1. **Authoring:** The six playbooks listed above are present and ready for review as workflow definitions.
-2. **Runtime validation:** After installing into the chosen project, run representative tasks through the matching adapter. Save the exact artifact revision, verification evidence, and at least one blocked or failure case for each workflow that uses those stages.
-3. **Readiness:** Update a workflow from Draft to Tested only after a real delegated run demonstrates the documented handoffs and gates. Mark it Ready only after repeatable runs support its claims.
+1. **Authoring:** The six playbooks listed above are present as workflow definitions.
+2. **Runtime validation:** After installing into the chosen project, run representative tasks through the matching adapter. Save the exact artifact revision and verification evidence; include a failure or blocker case for workflows that implement or verify changes.
+3. **Readiness:** Update a workflow from Draft to Tested only after a real delegated run demonstrates its documented handoffs and gates. Mark it Ready only after repeatable runs support its claims and known platform dependencies are documented.
 
 Keep this catalog synchronized with observed adapter capabilities, not aspirations. Document review alone does not establish runtime readiness.

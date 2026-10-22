@@ -44,13 +44,17 @@ cd /absolute/path/to/your-repo
 codex
 ```
 
-For a first read-only routing smoke test, ask:
+For a first read-only instruction and routing smoke test, ask:
 
 > Use Devkit to investigate how [a behavior] works. Read the Orchestrator instructions, workflow catalog, and selected playbook. Return an evidence-backed explanation with file references. Do not edit files, run tests, or spawn agents.
 
-For a real task after choosing a project, name the requested outcome and let the catalog route it:
+For a real task, state the requested outcome and let the catalog route it:
 
-> Use Devkit to [investigate / implement a feature / review a change / refactor / perform maintenance]: [scope, expected outcome, constraints]. Read the selected workflow and delegate only the stages it requires. Do not merge or deploy.
+> Use Devkit to add a `--json` option to this CLI. Done when JSON output is valid and existing text output is byte-identical. Context: the current text format is used by scripts. Constraints: do not add dependencies.
+
+You usually do not need to name a workflow category or tell the agent which roles to invoke. Add only the context and constraints that can change the implementation or its verification. Do not merge or deploy unless that action is explicitly part of the request and permitted by platform controls.
+
+The first smoke test checks instruction loading and routing only; it does **not** prove that project-scoped agents can be invoked. Before relying on delegation, use a disposable scratch repository with read-only parent permissions and explicitly request one read-only handoff to `devkit_tester`. Confirm the real subagent appears in `/subagents`, its report cites the current repository, and it makes no changes. Then exercise a small end-to-end change in a disposable project before treating that workflow as runtime-validated.
 
 In Codex CLI, `/subagents` shows spawned agent threads. If no subagents appear when explicitly requested, verify project trust, that `agents.enabled` has not been disabled, and that the Codex version supports project-scoped `.codex/agents/*.toml`.
 
@@ -60,6 +64,7 @@ In Codex CLI, `/subagents` shows spawned agent threads. If no subagents appear w
 - It will fail if the root has `AGENTS.override.md`, since Codex would ignore the root `AGENTS.md`. Resolve manually for now.
 - It does **not** change `.codex/config.toml`, model selections, approvals, or sandbox settings. Subagents inherit permissions from the main Codex session. **Read-only instructions for Tester and Reviewer are not a technical read-only sandbox**: use appropriate project permissions and review changes yourself.
 - It does not invoke or authenticate Codex, and there is no automatic upgrade/uninstall mechanism yet. For future Devkit changes, compare and intentionally replace generated files; conflicting reruns are rejected.
+- It does not create the target product's verification harness or feature map. Add a small reusable way to launch/check readiness, exercise the real feature, capture evidence, and clean up in each target repository where feasible.
 - It does not install missing external tools or guarantee the target app can run. The workflow must report `BLOCKED` when tests or runtime surfaces are unavailable.
 - This adapter is **Draft**, not production-validated. Integration on a real repository is still required.
 

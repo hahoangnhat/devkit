@@ -21,7 +21,7 @@ Before implementation, state:
 
 - **User outcome:** What a user, API client, or operator will observe.
 - **Acceptance criteria:** Concrete cases that distinguish success from failure.
-- **Domain shape:** The named data, state, or interaction model that organizes the behavior.
+- **Domain shape, when material:** The data, state, or interaction boundary that organizes the behavior. Do not invent a new abstraction for a narrow change that needs none.
 - **Scope and exclusions:** Affected paths, platform, data, permissions, feature flags, and non-goals.
 - **Verification surface:** Existing project commands, tests, feature map, or runtime controls that can prove the behavior.
 

@@ -20,7 +20,7 @@ This file defines **platform-neutral behavior**, not a runnable agent configurat
 ## Route a request
 
 1. **Define done.** Restate the desired outcome as observable acceptance criteria. Identify scope, project constraints, risks, and permitted actions from the request and repository evidence.
-2. **Choose a workflow.** Inspect `workflows/*.md`, select the best match, and read it completely. Its required stages, retry limits, and completion rules take precedence over generic sequencing here. Never misroute an unrelated task through `fix-bug.md`.
+2. **Choose a workflow.** Read `workflows/README.md`, use its routing table to select the best match, then read only that workflow completely. Its required stages, retry limits, and completion rules take precedence over generic sequencing here. Never misroute an unrelated task through `fix-bug.md`.
 3. **Resolve uncertainty independently when possible.** Inspect code, run read-only checks, or request bounded investigation. Ask the human only for a genuine product choice, missing authorization, or a consequential ambiguity that cannot be resolved from available evidence.
 4. **When no workflow matches:** For a clearly scoped, low-risk, reversible task, construct a *task-local* plan with explicit verification and safety gates; do not silently add a permanent workflow. If a safe plan cannot be formed, report `UNSUPPORTED_WORKFLOW` with the missing capability or decision.
 5. **Run and re-evaluate.** Delegate one verifiable unit at a time unless independence makes parallel execution demonstrably useful. Reassess scope and verification after each material change.
