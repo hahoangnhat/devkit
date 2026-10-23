@@ -4,7 +4,7 @@ This is a **project-scoped installer**, not a new agent runtime. Codex is the ru
 
 ## Install into a real repository
 
-Prerequisites: Python 3.11+ and a recent Codex CLI with custom subagents enabled. Codex must be installed and authenticated separately. **Run the command from the Devkit source checkout**, not the target repository:
+Prerequisites: Python 3.11+ and a recent Codex CLI with custom subagents enabled. Codex must be installed and authenticated separately. For automatic PR delivery, install and authenticate GitHub CLI (`gh auth login`) and have push/PR access to the target repository. **Run the command from the Devkit source checkout**, not the target repository:
 
 ```sh
 git -C /absolute/path/to/your-repo switch develop
@@ -94,7 +94,22 @@ For a real Fix Bug test when you're ready, ask:
 
 In Codex CLI, `/subagents` shows spawned agent threads. If no subagents appear when explicitly requested, verify project trust, that `agents.enabled` has not been disabled, and that the Codex version supports project-scoped `.codex/agents/*.toml`.
 
-**Subagent lifecycle:** Devkit starts fresh specialists by default, passes earlier reports to later tasks, and uses Codex `close_agent` after collecting each completed agent's results. Reuse is reserved for live state that is hard to transfer. Use `/subagents` to inspect active or completed threads; closing is done by the Orchestrator, not the installer.
+**Subagent lifecycle:** Devkit starts fresh specialists by default, passes reports and evidence to later tasks, and reuses agents only when they hold state that is hard to transfer. The Orchestrator collects final reports and tracks agent status. It closes completed threads **only if the active Codex runtime exposes an agent-close tool**. Some runtimes (including multi-agent V2) do not; `interrupt_agent` is not a replacement for closing a completed thread. Use `/subagents` to inspect agent activity. Completed threads may remain visible when no close tool exists; the installer cannot remove them.
+
+## Commit, push, and PR delivery
+
+For Fix Bug, Implement Feature, Refactor, and Maintenance, a **verified file change** is delivered by Developer after independent checks and review: commit only the approved diff, include the active adapter co-author, push the task branch, then create a PR against `develop`. The Codex adapter provides `CO_AUTHOR: Codex <noreply@openai.com>`; do not duplicate an attribution trailer already added by Codex. Normal Git author settings remain unchanged.
+
+On the verified task branch, Developer may use Git and GitHub CLI:
+
+```sh
+git add -- <approved-paths>
+git commit -m "<meaningful change>" -m "Co-authored-by: Codex <noreply@openai.com>"
+git push -u origin <task-branch>
+gh pr create --base develop --head <task-branch> --title "<title>" --body "<summary, checks, risks>"
+```
+
+Use `gh pr view` when a PR already exists; never open a duplicate. These are example commands, not commands run by the installer. If the remote, `gh`, authentication or permissions are missing, report `BLOCKED / DELIVERY_BLOCKED` with the verified local changes and recovery step. Do not force-push or auto-merge. Tasks with no file changes, plus the read-only Investigate and Review Change workflows, do **not** create commits or PRs. A request to save an investigation report should be handled as a separate Maintenance documentation change.
 
 ## Safety and limits
 

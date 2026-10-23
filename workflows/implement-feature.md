@@ -73,14 +73,19 @@ Skip this step if no code changed. Do not use review as a replacement for Tester
 - **Required check cannot run:** Ask the responsible agent for a safe recovery. Otherwise report a blocker, not success.
 - Allow up to **two code-correction rounds after the first implementation**. Stop when the work is verified, the limit is reached, no useful safe step remains, or a product decision is needed.
 
+## Deliver the verified change — Orchestrator and Developer
+
+For verified file changes, follow `agents/orchestrator.md` → **Deliver verified changes** before reporting `COMPLETED`. If publishing fails, report `BLOCKED / DELIVERY_BLOCKED`. No change means no commit or PR.
+
 ## Final result — Orchestrator
 
 | Result | Meaning |
 | --- | --- |
-| `COMPLETED / IMPLEMENTED` | The latest implementation passed independent behavior checks and code review. |
+| `COMPLETED / IMPLEMENTED` | The latest implementation passed independent behavior checks and code review, and its PR was delivered. |
 | `COMPLETED / ALREADY_PRESENT` | The requested behavior was already present and independently verified; no code changed. |
 | `BLOCKED / CHECKS_FAILED` | A required test or review still fails after the allowed corrections. |
 | `BLOCKED / INCONCLUSIVE` | Evidence is not enough to confirm the requested behavior. |
+| `BLOCKED / DELIVERY_BLOCKED` | Required checks passed, but the verified change could not be committed, pushed, or delivered as a PR. |
 | `BLOCKED / ENVIRONMENT_BLOCKED` | Required tools, environment, or access are not available. |
 | `NEEDS_HUMAN / DECISION_REQUIRED` | A product decision or new permission is needed. |
 

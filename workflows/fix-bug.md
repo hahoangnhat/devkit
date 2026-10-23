@@ -105,17 +105,22 @@ No code review is needed when no code changed. Orchestrator may ask for a separa
 - If required tests or review still fail when corrections stop, use `BLOCKED / CHECKS_FAILED`. Do not call a known failure `INCONCLUSIVE`.
 - Stop when the result is supported, no useful next test remains, the budget is used up, or permission is needed. Never lower the success requirements just to finish.
 
+## Deliver the verified change — Orchestrator and Developer
+
+For verified file changes, follow `agents/orchestrator.md` → **Deliver verified changes** before reporting `COMPLETED`. If publishing fails, report `BLOCKED / DELIVERY_BLOCKED`. No change means no commit or PR.
+
 ## Final result — Orchestrator
 
 Choose **one** result:
 
 | Result | Meaning |
 | --- | --- |
-| `COMPLETED / FIXED` | Latest fix passed behavior checks and independent code review. |
+| `COMPLETED / FIXED` | Latest fix passed behavior checks and independent code review, and its PR was delivered. |
 | `COMPLETED / ALREADY_FIXED` | A past fix is confirmed by before-and-after evidence. |
 | `COMPLETED / NO_CHANGE_NEEDED` | Current behavior meets **Expected** in relevant conditions, with no open signs of failure. |
 | `BLOCKED / CHECKS_FAILED` | Required tests or code review still fail after corrections stop. |
 | `BLOCKED / INCONCLUSIVE` | Not enough evidence to say the bug is fixed or no change is needed. |
+| `BLOCKED / DELIVERY_BLOCKED` | Required checks passed, but the verified change could not be committed, pushed, or delivered as a PR. |
 | `BLOCKED / ENVIRONMENT_BLOCKED` | A needed environment, tool, or permission is unavailable. |
 | `NEEDS_HUMAN / DECISION_REQUIRED` | A product decision or new permission is needed. |
 

@@ -57,11 +57,41 @@ class InstallTests(unittest.TestCase):
         for rule in (
             "Start a fresh subagent for each new task by default",
             "Reuse an open subagent",
-            "collect its report and evidence",
-            "close_agent",
+            "collect its final report and evidence",
+            "If the platform exposes an agent-close tool",
+            "Do not assume a close tool exists",
+            "Do not use `interrupt_agent` as a substitute for closing",
             "Before the final report",
         ):
             self.assertIn(rule, instructions)
+
+    def test_publish_instructions_installed_for_codex(self):
+        install(self.repo)
+        root_agent = (self.repo / "AGENTS.md").read_text()
+        orchestrator = (self.repo / ".devkit/agents/orchestrator.md").read_text()
+        developer = (self.repo / ".devkit/agents/developer.md").read_text()
+        for rule in (
+            "CO_AUTHOR: Codex <noreply@openai.com>",
+            "gh pr create --base develop",
+            "Do not publish changes from read-only workflows",
+        ):
+            self.assertIn(rule, root_agent)
+        for rule in ("## Deliver verified changes", "BLOCKED / DELIVERY_BLOCKED", "Do not perform Git work yourself"):
+            self.assertIn(rule, orchestrator)
+        for rule in ("STAGE: PUBLISH", "Co-authored-by: NAME <EMAIL>", "without force-push", "Do not merge the PR"):
+            self.assertIn(rule, developer)
+
+    def test_all_workflows_define_delivery_boundary(self):
+        root = Path(__file__).resolve().parents[2] / "workflows"
+        catalog = (root / "README.md").read_text()
+        self.assertIn("An explicitly requested saved investigation report", catalog)
+        for workflow in ("fix-bug", "implement-feature", "refactor", "maintenance"):
+            instructions = (root / f"{workflow}.md").read_text()
+            self.assertIn("## Deliver the verified change", instructions)
+            self.assertIn("BLOCKED / DELIVERY_BLOCKED", instructions)
+            self.assertIn("No change means no commit or PR", instructions)
+        self.assertIn("do not create commits, branches, worktrees, or PRs", (root / "investigate.md").read_text())
+        self.assertIn("Do not edit code, create commits or task branches, create a new PR", (root / "review-change.md").read_text())
 
     def test_reinstall_overwrites_custom_devkit_files(self):
         install(self.repo)

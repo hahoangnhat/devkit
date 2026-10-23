@@ -71,14 +71,19 @@ For docs, check important claims and links. For dependency or tool changes, chec
 - If a required check cannot run, ask the right agent for safe recovery or report a blocker.
 - Allow up to **two correction rounds after the first update**. Stop when verified, limits are reached, or no useful safe step remains.
 
+## Deliver the verified change — Orchestrator and Developer
+
+For verified file changes, follow `agents/orchestrator.md` → **Deliver verified changes** before reporting `COMPLETED`. If publishing fails, report `BLOCKED / DELIVERY_BLOCKED`. No change means no commit or PR.
+
 ## Final result — Orchestrator
 
 | Result | Meaning |
 | --- | --- |
-| `COMPLETED / MAINTAINED` | Latest update passed required checks and review. |
+| `COMPLETED / MAINTAINED` | Latest update passed required checks and review, and its PR was delivered. |
 | `COMPLETED / NO_CHANGE_NEEDED` | Requested upkeep was already satisfied; no files changed. |
 | `BLOCKED / CHECKS_FAILED` | Required checks or review still fail after allowed corrections. |
 | `BLOCKED / INCONCLUSIVE` | Important effects cannot be checked well enough. |
+| `BLOCKED / DELIVERY_BLOCKED` | Required checks passed, but the verified change could not be committed, pushed, or delivered as a PR. |
 | `BLOCKED / ENVIRONMENT_BLOCKED` | Required tool, environment, or access is missing. |
 | `NEEDS_HUMAN / DECISION_REQUIRED` | A user decision or new permission is needed. |
 

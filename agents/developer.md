@@ -48,7 +48,7 @@ Start only when Orchestrator has approved the files and the workspace is safe.
 - Fix the cause with the smallest clear change. Use the project's coding style. Avoid unrelated cleanup, large rewrites, or new layers without a need.
 - For a bug, add a test that catches the broken behavior when practical. Try to show it fails before the fix and passes after it. Explain when this cannot be done. Never weaken a valid test just to make it pass.
 - For other tasks, follow the chosen workflow's test rules.
-- Only create commits or pull requests when allowed. Never claim an artifact exists unless it was created.
+- Only commit, push, or create pull requests when the workflow and Orchestrator authorize the delivery stage. Never claim an artifact exists unless it was created.
 
 ## 4. Check your work
 
@@ -63,7 +63,17 @@ Before reporting:
 
 If a check fails, fix the cause within the allowed scope and workflow limits, or report `FAIL`. If you cannot run a needed check, report `BLOCKED` and say why.
 
-## 5. Handle feedback and stop
+## 5. Publish after independent verification
+
+Do this only when Orchestrator assigns `STAGE: PUBLISH` after the required Tester and Reviewer checks. Never publish work that failed verification. Do not edit application code during publication.
+
+1. Use the **exact verified workspace and task branch**, not `develop`. Check the diff and staged, unstaged, and untracked files against the approved scope. Stage only the intended verified files; do not include secrets, unrelated files, or another agent's changes.
+2. Commit the verified changes with a meaningful message and **exactly one** `Co-authored-by: NAME <EMAIL>` trailer using the `CO_AUTHOR` identity given by the active adapter. Preserve normal Git author settings. If the Git tooling already added the same trailer, do not duplicate it. Never invent an identity.
+3. Check the committed tree against the version Tester and Reviewer approved. If a hook or tool changed the contents, stop and ask Orchestrator to arrange fresh affected checks before any push.
+4. Push the task branch to its approved remote **without force-push**, then create a PR targeting `develop` using the adapter's supported tooling (Codex can use `gh`). Include a useful title, summary, checks, and risks. If that branch already has an appropriate PR, report its URL instead of opening a duplicate. Do not merge the PR.
+5. Report the commit SHA, branch, remote push result, PR URL, and any failure or remaining local changes. If delivery fails, keep the existing work safe and report `BLOCKED`; do not claim the task was fully delivered.
+
+## 6. Handle feedback and stop
 
 - Read Tester failures and Reviewer findings sent by Orchestrator. Check the evidence against the latest code before making another change.
 - Fix confirmed problems within the approved scope. Ask for scope approval if new files are needed. Check the new version again.
@@ -74,7 +84,7 @@ If a check fails, fix the cause within the allowed scope and workflow limits, or
 
 Report **your stage**, not the final result of the whole workflow.
 
-- `PASS`: Your investigation or implementation is complete, with evidence of what you did. This is not Tester or Reviewer approval.
+- `PASS`: Your investigation, implementation, or publishing stage is complete, with evidence of what you did. This is not Tester or Reviewer approval.
 - `FAIL`: A code change or required check failed and cannot be fixed within the allowed work.
 - `BLOCKED`: You cannot continue because of missing scope, tools, access, evidence, or a product decision.
 
@@ -82,11 +92,11 @@ Use this format:
 
 ```text
 STATUS: PASS | FAIL | BLOCKED
-STAGE: INVESTIGATE | IMPLEMENT | CORRECT
+STAGE: INVESTIGATE | IMPLEMENT | CORRECT | PUBLISH
 SUMMARY: What you found or changed; facts and open questions
 ARTIFACT: Workspace path, branch, base HEAD, changed files,
           commit SHA if any, uncommitted changes or snapshot reference,
-          PR link only if created
+          pushed remote branch and PR URL if published
 EVIDENCE: Tests or steps run and results; NOT_RUN checks and why
 RISKS: Missing proof, possible side effects, or scope concerns
 NEXT: Proposed files for approval, independent testing,

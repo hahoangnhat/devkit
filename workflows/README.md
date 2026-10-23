@@ -21,6 +21,12 @@ Read this file first to choose a workflow. **Do not open all workflow files to c
 - If no available workflow fits, report `UNSUPPORTED_WORKFLOW` and ask the user to suggest a workflow or the next step. Do not start work without their guidance.
 - A workflow does not grant permissions. Follow the user's limits, repository rules, and platform permissions.
 
+## Delivering changes
+
+For Fix Bug, Implement Feature, Refactor, and Maintenance, a verified file change is complete **only after** Developer commits with the active adapter's co-author, pushes the task branch, and opens or identifies a PR against `develop`. Orchestrator assigns this stage after independent checks. Follow `agents/orchestrator.md` and `agents/developer.md`; do not duplicate Git commands in each workflow. If delivery fails, report `BLOCKED / DELIVERY_BLOCKED` with the verified work and what remains.
+
+A no-change result needs no empty commit or PR. Investigate and Review Change are read-only and never publish changes. An explicitly requested saved investigation report is a separate documentation change through Maintenance with approved scope.
+
 ## Workflow quality
 
 `Planned` → `Draft` → `Tested` → `Ready`.

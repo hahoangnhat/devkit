@@ -68,14 +68,19 @@ Skip review when no code changed. Do not require unrelated cleanup.
 - For missing baseline evidence or required checks, ask the right agent for a safe next check. Otherwise report a blocker.
 - Allow up to **two code-correction rounds after the first refactor**. Stop when verified, limits are reached, or no useful safe step remains.
 
+## Deliver the verified change — Orchestrator and Developer
+
+For verified file changes, follow `agents/orchestrator.md` → **Deliver verified changes** before reporting `COMPLETED`. If publishing fails, report `BLOCKED / DELIVERY_BLOCKED`. No change means no commit or PR.
+
 ## Final result — Orchestrator
 
 | Result | Meaning |
 | --- | --- |
-| `COMPLETED / REFACTORED` | Latest refactor passed independent behavior checks and review. |
+| `COMPLETED / REFACTORED` | Latest refactor passed independent behavior checks and review, and its PR was delivered. |
 | `COMPLETED / NO_CHANGE_NEEDED` | No justified code change was found; no files changed. |
 | `BLOCKED / CHECKS_FAILED` | Required tests or review still fail after allowed corrections. |
 | `BLOCKED / INCONCLUSIVE` | Evidence cannot confirm important behavior stayed the same. |
+| `BLOCKED / DELIVERY_BLOCKED` | Required checks passed, but the verified change could not be committed, pushed, or delivered as a PR. |
 | `BLOCKED / ENVIRONMENT_BLOCKED` | Required tool, environment, or access is missing. |
 | `NEEDS_HUMAN / DECISION_REQUIRED` | A user decision or new permission is needed. |
 

@@ -56,4 +56,4 @@ Stop when the question is answered, no useful safe check remains, a limit is rea
 
 Report **the answer first**, then supporting code references or runtime evidence, the version checked, any unknowns, and the next useful check if blocked. Say when no runtime test was needed.
 
-**Read-only rule:** Do not edit tracked code, tests, or config; do not create commits, branches, or worktrees for this task. Only use safe temporary test data when allowed. Do not merge or deploy. If a fix is needed, report it as a recommendation; use a separate change workflow only when the user requests it.
+**Read-only rule:** Do not edit tracked code, tests, or config; do not create commits, branches, worktrees, or PRs for this task. If the user explicitly requests a saved report in the repository, use a separate Maintenance task with an approved documentation scope and its delivery stage. Only use safe temporary test data when allowed. Do not merge or deploy. If a fix is needed, report it as a recommendation; use a separate change workflow only when the user requests it.
