@@ -1,70 +1,84 @@
-# Workflow: Refactor
+# Refactor Workflow
 
-## Purpose
+## Goal
 
-Improve code structure while preserving the externally observable behavior that the current implementation already provides. If behavior must change, route that part through **Implement Feature** or **Fix Bug** and keep the structural work separable.
+Make existing code easier to read, change, or maintain **without changing its behavior**. Show that important behavior still works. Do not add features or fix unrelated bugs.
 
-The refactor is worthwhile only when the new structure makes the relevant code easier to understand or change, removes unnecessary branches or invalid states, or reduces repeated work without adding needless indirection.
+## Roles
 
-## Roles and authority
+- **Orchestrator:** Sets the goal, assigns work, approves file scope, and reports results. Does not design or edit the refactor.
+- **Developer:** Proposes files, records a baseline, and makes approved changes.
+- **Tester:** Independently checks behavior before and after the change.
+- **Reviewer:** Reviews the latest diff after Tester passes.
 
-- **Orchestrator:** Pins the behavior contract, defines the target structural outcome, and owns routing and final disposition. Does not edit application code.
-- **Developer:** Owns the structural change and focused self-checks.
-- **Tester:** Independently checks behavior parity on the relevant surface and latest artifact.
-- **Reviewer:** Reviews the exact diff for behavior changes, complexity, missed callers, and regression risk.
+Use the agent role files for technical details and permissions. Start only the agents needed for each stage.
 
-Follow **agents/orchestrator.md** and the target repository instructions. Keep one writer for each overlapping code surface.
-
-## 1. Name the structural outcome and pin current behavior — Orchestrator
+## 1. Define the goal — Orchestrator
 
 Record:
 
-- The specific code area and maintenance pain being addressed.
-- What structure should exist after the refactor and why it is clearer.
-- The observable behavior that must remain unchanged, including relevant inputs, outputs, side effects, errors, and user paths.
-- The repository/revision and available behavior-level tests, snapshots, fixtures, or runtime controls.
+- **Goal:** What code should be simpler and why.
+- **Keep:** Behavior, public APIs, outputs, errors, and data formats that must not change.
+- **Success:** The intended code improvement and checks that show behavior is preserved.
+- **Target:** Repository, version, and environment.
+- **Limits:** Out-of-scope areas, time, cost, and permissions.
 
-Inspect the affected subsystem and callers first. Before moving structure, establish a behavior pin using existing tests or a focused characterization/equivalence check. If coverage is missing, ask Developer to create the smallest useful behavior-level pin before changing the structure. Type checking and lint alone do not establish parity.
+If the user wants a behavior change, clarify it or choose another workflow. Do not pick a technical solution for Developer.
 
-If the desired structural outcome is unclear or the request would change product behavior, investigate or route the behavior change separately. Do not hide feature work inside a refactor.
+## 2. Investigate and propose — Developer (read-only)
 
-## 2. Reshape in verifiable units — Developer
+Study the code, callers, tests, and history. Find a small change that has a clear benefit.
 
-- Remove dead or redundant structure before adding a new abstraction.
-- Make the smallest change that reaches the named target shape. Keep code local when its shape is already clear.
-- For an API or type reshape, migrate affected callers and remove the obsolete path in the same scoped change when safe. Do not leave compatibility layers without a documented requirement.
-- Make one bounded structural move at a time and keep the behavior pin green after each meaningful unit.
-- Spot-check renames and references in code, configuration, tests, documentation, and string-based integrations.
-- Keep formatting, feature changes, and unrelated cleanup out of scope.
+Report the planned approach, **files to edit with reasons**, important risks, and **baseline checks** to run on the original version and repeat after the change.
 
-If the target shape cannot be reached without a behavior change or a larger redesign, stop and return the evidence to Orchestrator for a scope decision.
+**Do not edit code yet.** If no useful refactor is needed, explain why and stop. If the important behavior cannot be checked, propose a safer plan or report the gap.
 
-## 3. Prove behavior parity — Tester
+## 3. Approve the file scope — Orchestrator
 
-Tester verifies the latest artifact against the pinned contract on the matching surface. Prefer existing behavior tests or a replay/equivalence check with comparable inputs. Record revision, environment, commands/actions, outputs, and artifacts.
+Check Developer's proposed files against the user's limits and repository rules. Approve the file list or request a better explanation. Do not decide how the refactor should be implemented.
 
-**PASS** requires evidence that the relevant behavior remains the same. A successful build, type check, or source-only comparison is not a parity proof. If the baseline or matching execution surface is unavailable, report **BLOCKED / PARITY_UNPROVEN** and name the evidence needed.
+Developer must ask for approval **before editing any other file**. Ask the user only when broader permission or a product decision is needed.
 
-## 4. Review the structural result — Reviewer
+## 4. Make the refactor — Developer
 
-Review the exact latest diff for:
+Prepare a safe Git workspace using `agents/developer.md`. Before editing, run the baseline checks on the original code when possible. Record the **exact version**, commands, inputs, and results.
 
-- A clear improvement to the named structural problem.
-- Preserved behavior and removal of obsolete paths or redundant branches.
-- Missed callers, hidden references, compatibility changes, or new indirection.
-- Test quality and scope discipline.
+Edit only approved files. Preserve behavior and contracts. Keep the diff focused; add tests when they help protect existing behavior. Do not quietly introduce new dependencies or unrelated cleanup.
 
-Report only specific, actionable findings. Do not edit the patch or treat a clean diff as proof of runtime parity.
+Run the relevant checks again and compare with the baseline. Report the changed version, diff, test results, checks not run, and remaining risks. If an important comparison is not possible, say so; **do not call it verified**.
 
-## 5. Correct and stop — Orchestrator
+## 5. Check unchanged behavior — Tester
 
-After a correction, rerun the affected behavior pin and review the new artifact. Stop when parity and the structural goal are supported by evidence, when no useful next edit/check remains, or when scope, resources, or access require a decision. Do not keep a refactor whose diff does not deliver the named improvement.
+Independently check the **latest changed version** against the baseline or other reliable before-and-after evidence. Use the relevant UI, API, CLI, or service when possible.
 
-## Final outcome and report
+Check important outputs, errors, edge cases, and affected callers. Record the original and changed versions, environment, steps, expected and actual results, and missing checks.
 
-- **COMPLETED / REFACTORED:** The target structure was reached, behavior parity passed on the latest artifact, and the latest review has no unresolved blocking finding.
-- **BLOCKED / PARITY_UNPROVEN:** The available evidence cannot establish unchanged behavior.
-- **BLOCKED / ENVIRONMENT_BLOCKED:** Required baseline, surface, or tool is unavailable.
-- **NEEDS_HUMAN / SCOPE_DECISION:** The requested change needs a behavior or architecture decision outside the brief.
+Return `PASS`, `FAIL`, or `BLOCKED` with evidence. A passing build alone does not prove unchanged behavior.
 
-Report the structural pain and target shape; pinned behaviors and parity evidence; repository and artifact revision; changed paths; Reviewer result; checks actually run and not run; remaining risks; and any behavior change split into follow-up work.
+## 6. Review — Reviewer
+
+After Tester passes, review the **same version**. Check the change's benefit, behavior risks, tests, and approved file scope. Return `PASS`, `FAIL`, or `BLOCKED` with supported findings.
+
+Skip review when no code changed. Do not require unrelated cleanup.
+
+## 7. Handle results — Orchestrator
+
+- On Tester `FAIL` or blocking review findings, send evidence to Developer for a focused correction.
+- Approve any new files before Developer edits them. After a change, rerun affected Tester checks and review on the new version.
+- For missing baseline evidence or required checks, ask the right agent for a safe next check. Otherwise report a blocker.
+- Allow up to **two code-correction rounds after the first refactor**. Stop when verified, limits are reached, or no useful safe step remains.
+
+## Final result — Orchestrator
+
+| Result | Meaning |
+| --- | --- |
+| `COMPLETED / REFACTORED` | Latest refactor passed independent behavior checks and review. |
+| `COMPLETED / NO_CHANGE_NEEDED` | No justified code change was found; no files changed. |
+| `BLOCKED / CHECKS_FAILED` | Required tests or review still fail after allowed corrections. |
+| `BLOCKED / INCONCLUSIVE` | Evidence cannot confirm important behavior stayed the same. |
+| `BLOCKED / ENVIRONMENT_BLOCKED` | Required tool, environment, or access is missing. |
+| `NEEDS_HUMAN / DECISION_REQUIRED` | A user decision or new permission is needed. |
+
+Report the goal, approved files, exact versions, baseline and final checks, Tester and Reviewer results, tests not run, and risks. Link a PR only if it exists.
+
+**Safety:** Do not merge, deploy, or make hard-to-undo changes without permission. Do not hide behavior changes inside a refactor.

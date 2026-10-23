@@ -23,7 +23,7 @@ Record:
 - **Key check:** What result would show the bug, or show correct behavior.
 - **Success check:** What must be tested and what proof is needed.
 
-Check reports, logs, code history, and existing pull requests first. Ask the user only for a missing product decision or required permission.
+Pass the bug report and any existing evidence to Tester. Ask Tester or Developer to check relevant logs, code history, and pull requests when needed. Ask the user only for a missing product decision or required permission.
 
 ## 2. Try to reproduce the bug — Tester
 
@@ -57,9 +57,9 @@ A few passing tests do not cancel evidence of a real failure. Never ask Develope
 
 1. Identify the pull request or commit and the code versions **before** and **after** it.
 2. If possible, run the same test in the same conditions on both versions. Check that the bug appears before and correct behavior appears after.
-3. Report `COMPLETED / ALREADY_FIXED` only when the before-and-after evidence supports it. Do not edit the existing fix or open a competing pull request.
-4. If both versions still fail, report the open bug. Do not take over a fix already owned by someone else.
-5. If the older version cannot be tested or does not show the bug, do not claim `ALREADY_FIXED`. Decide between `NO_CHANGE_NEEDED` and `INCONCLUSIVE` from the current evidence.
+3. Report `ALREADY_FIXED_VERIFIED` only when the before-and-after evidence supports it. Orchestrator then decides whether to end as `COMPLETED / ALREADY_FIXED`. Do not edit the existing fix or open a competing pull request.
+4. If both versions still fail, report `DEFECT_PRESENT` with evidence. Do not take over a fix already owned by someone else.
+5. If the older version cannot be tested or does not show the bug, report `INCONCLUSIVE` for the earlier fix and give the current evidence. Orchestrator decides whether `NO_CHANGE_NEEDED` or `INCONCLUSIVE` fits the task.
 
 A commit message, ticket status, or passing test alone is not proof of an earlier fix.
 
@@ -102,6 +102,7 @@ No code review is needed when no code changed. Orchestrator may ask for a separa
 - **Tool or environment fails:** Try safe recovery. Never call an unrun test `PASS`.
 - Allow up to **two rounds of code corrections after the first fix**. Reproduction attempts have **no fixed count**.
 - When code changes after testing or review, repeat any checks made out of date by the change.
+- If required tests or review still fail when corrections stop, use `BLOCKED / CHECKS_FAILED`. Do not call a known failure `INCONCLUSIVE`.
 - Stop when the result is supported, no useful next test remains, the budget is used up, or permission is needed. Never lower the success requirements just to finish.
 
 ## Final result — Orchestrator
@@ -113,6 +114,7 @@ Choose **one** result:
 | `COMPLETED / FIXED` | Latest fix passed behavior checks and independent code review. |
 | `COMPLETED / ALREADY_FIXED` | A past fix is confirmed by before-and-after evidence. |
 | `COMPLETED / NO_CHANGE_NEEDED` | Current behavior meets **Expected** in relevant conditions, with no open signs of failure. |
+| `BLOCKED / CHECKS_FAILED` | Required tests or code review still fail after corrections stop. |
 | `BLOCKED / INCONCLUSIVE` | Not enough evidence to say the bug is fixed or no change is needed. |
 | `BLOCKED / ENVIRONMENT_BLOCKED` | A needed environment, tool, or permission is unavailable. |
 | `NEEDS_HUMAN / DECISION_REQUIRED` | A product decision or new permission is needed. |

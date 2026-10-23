@@ -1,62 +1,71 @@
-# Workflow: Review Change
+# Review Change Workflow
 
-## Purpose
+## Goal
 
-Independently assess a specified diff or change artifact and return concrete findings. This workflow is read-only: it does not implement fixes, modify tests, approve a merge, or publish a review externally.
+Review an existing code change and report clear, useful findings. The target may be a pull request, commit, branch diff, or uncommitted change. **Do not edit code or fix issues in this workflow.** A review can finish even when it finds problems.
 
-Use it when the requested outcome is a review. If implementation is also requested, complete the review first and let Orchestrator route any authorized correction through the appropriate implementation workflow.
+## Roles
 
-## Roles and authority
+- **Orchestrator:** Defines the review target, assigns agents, tracks their reports, and gives the final result. Does not review code.
+- **Reviewer:** Owns the technical review and its findings. Does not edit code.
+- **Tester:** Checks specific behavior when the review needs runtime evidence. Does not edit code.
+- **Developer:** Not needed by default. Do not start a fix through this workflow.
 
-- **Orchestrator:** Defines the review question and exact artifact, gathers context, and reports the review disposition.
-- **Reviewer:** Inspects the assigned change independently and reports evidence-backed findings without editing.
-- **Tester:** Used only when a focused, authorized behavioral check is needed to resolve a material review question. A code review does not replace required behavioral verification.
-- **Developer:** Not used unless Orchestrator later receives authorization to implement findings in a separate workflow.
+Follow the agent role files for how to work and what is allowed. Use real subagents through the platform adapter.
 
-Follow **agents/reviewer.md** for finding format, independence, and review boundaries.
+## 1. Set the review target — Orchestrator
 
-## 1. Establish the review artifact — Orchestrator
+Record:
 
-Before review, provide:
+- **Target:** Repository and PR, commit, branch diff, or local changes to review.
+- **Change:** Base and latest version, or enough details for Reviewer to identify the full diff.
+- **Goal:** What the change is meant to do, with requirements or acceptance checks if known.
+- **Focus:** Any risks or parts the user wants checked first.
+- **Limits:** Permissions, time budget, and checks that must not run.
 
-- Repository, intended base and target revisions, branch/worktree, and complete diff or stable patch snapshot.
-- The requested contract, acceptance criteria, constraints, and relevant workflow.
-- Changed paths, Developer self-checks, Tester evidence and artifact revision when required, and known exclusions.
+Give these facts to Reviewer. Do not choose the findings or require an approved code-change scope: **this is review-only work**. If the target is unclear, ask for the missing detail instead of guessing which change to review.
 
-For an uncommitted change, identify staged, unstaged, and untracked content separately. **Base HEAD alone is not the patch identity.** If the intended change cannot be distinguished from unrelated user work, narrow the assignment before review. Do not ask Reviewer to approve an arbitrary working tree.
+## 2. Review the change — Reviewer
 
-## 2. Inspect and assess — Reviewer
+Identify the exact change and read its full relevant diff. For uncommitted work, include staged, unstaged, and relevant untracked files. Check the code around the change, tests, and known requirements as needed.
 
-Review the complete assigned diff and enough surrounding code, requirements, callers, tests, repository guidance, and history to evaluate it. Check:
+If a PR or commit is not available in the current checkout, Reviewer may prepare an **isolated, temporary checkout or detached worktree** for that exact version, when tools and permissions allow it. Do not switch the user's current branch or change an existing worktree. Do not create a task branch or change the submitted code. Report the workspace path and code version to Orchestrator. If a safe checkout is not possible, report `BLOCKED` instead of reviewing a different version.
 
-1. Does the change meet the stated behavior or maintenance contract?
-2. Are important inputs, outputs, state transitions, errors, and boundary conditions handled?
-3. Is there a reachable regression, security, privacy, permission, data-integrity, or compatibility risk relevant to this diff?
-4. Do tests assert observable behavior and cover the changed path? Are claimed checks tied to this exact artifact?
-5. Is the scope focused, and is the verified artifact still the one under review?
+Use the review rules in `agents/reviewer.md`. Focus on real bugs, broken behavior, security risks, missing important tests, and unwanted changes. Give each supported finding a location, impact, evidence, and a useful next action.
 
-Validate a suspected defect by tracing a concrete path or performing an authorized, non-destructive check. Do not produce generic warnings, style-only blockers, duplicate findings, or claims based on an earlier revision. If a question requires live behavior evidence, state that gap or ask Orchestrator to arrange Tester verification.
+Do not invent a cause or test result. Do not block for personal style choices. State what you did not check. If the diff cannot be identified or important parts cannot be reviewed, return `BLOCKED` with the reason; **do not call a partial review a full pass**.
 
-## 3. Report findings — Reviewer
+If runtime evidence is needed to judge an important risk, report the exact behavior that needs checking so Orchestrator can ask Tester. Do not change code or publish PR comments or approvals.
 
-For each finding include:
+## 3. Check behavior when needed — Tester (optional)
 
-- **LOCATION:** Exact file and line or artifact reference.
-- **SEVERITY:** **CRITICAL**, **HIGH**, **MEDIUM**, or **LOW**.
-- **DISPOSITION:** **BLOCKING** or **ADVISORY**, with the reason.
-- **EVIDENCE:** Trigger, reachable failure mechanism, and observed or traced result.
-- **ACTION:** Smallest correction or precise check needed.
+Skip this step when Reviewer can reach a sound result from the code and available evidence.
 
-If there are no findings, say so and state the reviewed scope and evidence gaps. A review with no findings is not merge authorization. Do not fix findings in this workflow.
+Otherwise Orchestrator asks Tester to check a **specific behavior** on the same code version being reviewed. Pass along the exact checkout or worktree when one was prepared. Tester may use that workspace or prepare a separate safe, temporary checkout of the same version if needed. Tester runs safe, allowed checks on the right UI, API, CLI, or service and reports `PASS`, `FAIL`, or `BLOCKED` with actual results and checks not run.
 
-## Stop conditions and outcome
+Orchestrator sends Tester's report back to Reviewer. **Reviewer owns the review verdict.** A failed runtime check is evidence for review, not permission to start a fix.
 
-- **COMPLETED / REVIEWED:** The assigned artifact was reviewed and findings or a no-findings result were reported. This may include blocking findings that require a separate correction.
-- **BLOCKED / REVIEW_INCOMPLETE:** The diff, contract, required evidence, or permission is missing, contradictory, or stale enough to prevent a sound review.
-- **NEEDS_HUMAN / SCOPE_DECISION:** The review cannot proceed until the intended change or review boundary is clarified.
+## 4. Return the review verdict — Reviewer
 
-If the artifact changes during review, report the stale scope and request a fresh review of the new artifact. Do not reuse a prior verdict.
+Return the report format defined in `agents/reviewer.md`, including the exact reviewed version and coverage.
 
-## Required report
+- `PASS`: No supported blocking findings remain. Advisory findings may still be present.
+- `FAIL`: At least one supported blocking finding needs action.
+- `BLOCKED`: Missing target, access, key evidence, or checks prevent a sound verdict.
 
-Include review scope and artifact identity; **PASS**, **FAIL**, or **BLOCKED** for the review stage; ordered findings in the format above or **None**; checks actually run and not run; evidence gaps; risks; and the next action. Orchestrator owns the task-level outcome.
+If the change has moved since the review began, identify the new version and repeat any review or Tester checks affected by it. **Never reuse an old verdict for changed code.** Stop when there is enough evidence for a verdict, no useful safe check remains, or a limit is reached.
+
+## 5. Report the result — Orchestrator
+
+Use the latest Reviewer verdict. If reports conflict or evidence is missing, ask the right specialist for a focused check. Do not settle technical disagreements by reviewing code yourself.
+
+| Result | Meaning |
+| --- | --- |
+| `COMPLETED / REVIEWED` | Review finished with a `PASS` or `FAIL` verdict and evidence. A `FAIL` means changes are needed, not that the review task failed. |
+| `BLOCKED / INCONCLUSIVE` | The review cannot reach a sound verdict with the evidence available. |
+| `BLOCKED / ENVIRONMENT_BLOCKED` | A required diff, tool, environment, or permission is unavailable. |
+| `NEEDS_HUMAN / DECISION_REQUIRED` | The user must choose the target, clarify an important requirement, or grant permission. |
+
+Report the **review verdict first**, then blocking and advisory findings, exact PR/commit/diff version, coverage, checks run or not run, and remaining risks. Do not claim that `PASS` means a PR was approved or merged.
+
+**Review-only rule:** Do not edit code, create commits or task branches, change the submitted PR, merge, or deploy. A temporary checkout or detached worktree is allowed only to read or test the exact review target safely. Do not overwrite existing work or remove a workspace you do not own. Do not publish PR review comments or approvals without separate permission. If a fix is needed, report it; use a separate change workflow only when the user asks for a fix.

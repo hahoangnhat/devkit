@@ -1,64 +1,59 @@
-# Workflow: Investigate
+# Investigate Workflow
 
-## Purpose
+## Goal
 
-Answer a bounded engineering question by tracing the real system and presenting evidence. This workflow is read-only: its deliverable is an explanation, diagnosis, or recommendation, not a code change.
+Answer a question about code or a reported problem using clear evidence. **Do not change code.** Use this workflow when the user wants to understand something, not fix it. A bug report can be investigation-only if that is what the user asks for.
 
-Use it for questions such as how a behavior works, why a design exists, where a failure may originate, whether an approach is feasible, or what evidence is missing. If the requested outcome is to change behavior, route to Fix Bug or Implement Feature after the question is answered.
+## Roles
 
-## Roles and authority
+- **Orchestrator:** Defines the question, assigns work, handles blockers, and reports the result. Does not investigate.
+- **Developer:** Reads code and history to explain how things work or find a cause. Does not edit code.
+- **Tester:** Checks real behavior when runtime evidence is needed. Does not edit code.
+- **Reviewer:** Not needed. There is no code change to review.
 
-- **Orchestrator:** Owns the question, evidence boundary, synthesis, and final answer. Usually investigates directly.
-- **Tester:** Runs a bounded read-only runtime check when source inspection cannot answer the question. Does not edit application code or tracked tests.
-- **Developer:** Not used; this workflow does not authorize implementation.
-- **Reviewer:** Not used unless Orchestrator requests a specific independent read-only assessment of conflicting evidence.
+Follow the agent roles and permissions. Use real subagents through the platform adapter.
 
-Follow **agents/orchestrator.md** for handoffs, permissions, and truthful reporting. Do not create parallel work merely to use more agents. Delegate only when the questions are independent, the evidence can be gathered separately, and parallel work is likely to shorten the path to a reliable answer.
+## 1. Define the question — Orchestrator
 
-## 1. Define the question and boundary — Orchestrator
+Record the **question**, the **target** (repo, version, or environment), what **evidence** would answer it, and any **limits**. Do not require a product decision unless it is needed to answer the question.
 
-Record:
+Give code questions to Developer. For a runtime symptom, Tester may go first to collect evidence. Use both only when needed.
 
-- The question that must be answered and the intended reader.
-- Repository and relevant revision, product surface, affected paths, and known constraints.
-- Whether the user needs an explanation, a diagnosis, a feasibility assessment, or a recommendation.
-- What evidence would answer the question and what would remain uncertain.
+## 2. Investigate — Developer
 
-Inspect the available repository guidance, feature documentation, tests, logs, history, and project verification instructions before asking the user for information already available. Separate authoritative requirements from assumptions in tickets or reports.
+Read the relevant code, tests, configuration, logs, and history. Follow the parts that help answer the question; do not read unrelated files without a reason.
 
-If the request also asks for a change, keep this investigation read-only and identify the appropriate follow-up workflow. Do not silently broaden the assignment.
+- For **how it works**, explain the main steps and point to the code.
+- For **why it happens**, test possible explanations against evidence. Do not present a guess as a confirmed cause.
+- For a reported problem, use Tester's observations when available. Note which conditions are still unknown.
 
-## 2. Trace the system and gather evidence — Orchestrator, Tester when needed
+Return `STAGE: INVESTIGATE` with findings, file and line references where relevant, the version examined, and any open questions. **Do not edit files or start a fix.**
 
-1. Start at the observed behavior or named entry point. Follow the relevant callers, state, data shape, and external boundaries until the mechanism is clear or evidence runs out.
-2. Prefer existing project verification commands, feature maps, tests, logs, and control surfaces. Do not invent commands or claim a test was run when it was only inspected.
-3. Use runtime evidence when the question is about behavior that source reading cannot establish. Tester records the exact revision, environment, action or command, result, and artifact.
-4. Keep experiments read-only and within the given permissions. Do not alter shared, production, or user data. Use temporary diagnostics only when authorized and safe.
-5. For each material hypothesis, record the evidence that supports or contradicts it. Stop repeating an inspection or experiment when it cannot produce new information.
+## 3. Check behavior if needed — Tester
 
-**Parallel work:** First identify blocking questions, genuinely independent evidence streams, shared files or systems, and whether one investigator is the smallest effective approach. Keep a single owner for overlapping investigation; parallelize only separable evidence gathering.
+Skip this step when code evidence already answers the question. Otherwise Orchestrator gives Tester a specific behavior to check.
 
-## 3. Synthesize the answer — Orchestrator
+Test the right UI, API, CLI, or service when available. Record the version, environment, steps, results, and checks not run. A passing build or test suite alone does not prove runtime behavior.
 
-Lead with the answer. Support it with precise file and line references, commands, logs, runtime observations, or other inspectable artifacts. Label each conclusion as:
+Try another test only if it answers a useful question and stays within the time and tool limits. **There is no fixed attempt count.** Return observed facts or a clear blocker, not a final result.
 
-- **Observed:** Directly established from the inspected artifact or runtime.
-- **Inferred:** The best explanation of observed evidence, with the reasoning stated.
-- **Unknown:** Not established, with the missing evidence named.
+Orchestrator sends new evidence to Developer if a technical explanation still needs work. Independent safe tasks may run together.
 
-For a choice between alternatives, give the real tradeoffs and a recommendation. Do not pad the report with speculative possibilities or call a hypothesis a root cause without discriminating evidence.
+## 4. Finish or stop — Orchestrator
 
-## Stop conditions and outcome
+Use the specialist reports to decide whether the main question has an evidence-backed answer. If evidence conflicts or is missing, ask the right agent for one more useful check. **Do not investigate or choose a technical answer yourself.**
 
-Finish when the question is answered to the requested scope, no useful read-only evidence source remains, the authorized investigation budget is exhausted, or further progress requires access or a decision.
+Stop when the question is answered, no useful safe check remains, a limit is reached, or permission is needed. Do not mark an unclear answer as confirmed.
 
-- **COMPLETED / ANSWERED:** The requested explanation is supported by cited evidence.
-- **COMPLETED / RECOMMENDATION:** Feasibility or alternatives were assessed with evidence and tradeoffs.
-- **BLOCKED / INCONCLUSIVE:** Evidence is insufficient or the required runtime surface is unavailable. State the exact gap and the most useful next check.
-- **NEEDS_HUMAN / DECISION_REQUIRED:** An unresolved product decision or authorization prevents a sound conclusion.
+## Final result — Orchestrator
 
-Do not report **BLOCKED** merely because source inspection found no issue. Do not report an answer as verified when only a proxy or assumption supports it.
+| Result | Meaning |
+| --- | --- |
+| `COMPLETED / FINDINGS` | The main question has an evidence-backed answer. |
+| `BLOCKED / INCONCLUSIVE` | The evidence is not enough to answer the main question. |
+| `BLOCKED / ENVIRONMENT_BLOCKED` | A required tool, environment, or access is unavailable. |
+| `NEEDS_HUMAN / DECISION_REQUIRED` | A user decision or permission is required. |
 
-## Required report
+Report **the answer first**, then supporting code references or runtime evidence, the version checked, any unknowns, and the next useful check if blocked. Say when no runtime test was needed.
 
-Include the question and scope; repository/revision; concise answer; evidence with file/line references or runtime artifacts; observed facts versus inference; checks actually run and not run; confidence and limitations; explicit code changes (**none**); and one useful next action when the question remains open.
+**Read-only rule:** Do not edit tracked code, tests, or config; do not create commits, branches, or worktrees for this task. Only use safe temporary test data when allowed. Do not merge or deploy. If a fix is needed, report it as a recommendation; use a separate change workflow only when the user requests it.

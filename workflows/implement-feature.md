@@ -1,71 +1,89 @@
-# Workflow: Implement Feature
+# Implement Feature Workflow
 
-## Purpose
+## Goal
 
-Deliver a requested behavior change in small, verifiable steps. The feature contract is the observable behavior the user asked for; implementation detail should stay as small as the evidence and acceptance criteria allow.
+Add or change product behavior requested by the user. Deliver working code with clear proof that it meets the agreed requirements. **Do not edit code until the change scope is approved.** Do not add work the user did not ask for.
 
-Use this workflow for new or intentionally changed product behavior. Use **Fix Bug** for a reported defect against existing expected behavior, **Refactor** for structure-only changes, and **Investigate** when the requested outcome is an answer rather than a change.
+## Roles
 
-## Roles and authority
+- **Orchestrator:** Records the goal, assigns steps, approves file scope, and reports the result. Does not write code or choose the technical design.
+- **Developer:** Studies the code, proposes a small change, implements it after approval, and runs initial checks.
+- **Tester:** Checks the requested behavior independently on the latest version. Does not edit code.
+- **Reviewer:** Reviews the latest change after Tester passes. Does not edit code.
 
-- **Orchestrator:** Defines the feature contract, scope, work ownership, evidence gates, and final disposition. Does not edit application code.
-- **Developer:** Owns implementation and focused self-checks within the assigned scope.
-- **Tester:** Independently verifies the behavior on the relevant surface and exact latest artifact.
-- **Reviewer:** Independently reviews the latest diff after applicable behavioral verification.
+Follow the agent role files for technical steps and permissions. Use real subagents through the platform adapter. Skip code review when no code changes are needed.
 
-Follow **agents/orchestrator.md** and the target repository instructions. Use actual adapter subagents when a role is required; Markdown alone does not dispatch agents. Do not parallelize code-coupled work or let multiple writers edit the same surface.
+## 1. Define the feature — Orchestrator
 
-## 1. Define the feature contract — Orchestrator
+Record:
 
-Before implementation, state:
+- **Goal:** What the user wants to do and why.
+- **Expected:** What should happen, including important inputs, errors, and limits.
+- **Acceptance:** Observable checks that would prove the feature works.
+- **Target:** Project, code version, platform, and environment that matter.
+- **Limits:** What is out of scope, plus time, cost, and permission limits.
 
-- **User outcome:** What a user, API client, or operator will observe.
-- **Acceptance criteria:** Concrete cases that distinguish success from failure.
-- **Domain shape, when material:** The data, state, or interaction boundary that organizes the behavior. Do not invent a new abstraction for a narrow change that needs none.
-- **Scope and exclusions:** Affected paths, platform, data, permissions, feature flags, and non-goals.
-- **Verification surface:** Existing project commands, tests, feature map, or runtime controls that can prove the behavior.
+Use the user's requirements, not guesses about product behavior. Ask the user when a missing product decision would change the result. Give Developer the known facts and acceptance checks.
 
-Inspect the relevant subsystem, callers, types, and existing user path first. Keep the contract concise. If the expected behavior, data semantics, or authorization is genuinely unclear, investigate it or return **NEEDS_HUMAN / DECISION_REQUIRED** rather than filling the gap with an assumption.
+## 2. Investigate and propose — Developer (no code edits)
 
-## 2. Choose the smallest useful execution shape — Orchestrator
+Check the relevant code, tests, and existing behavior. Prefer the project's current patterns. Find the smallest useful approach and any important risks or dependencies.
 
-Identify blocking prerequisites, independent workstreams, shared mutable state or files, and the smallest safe ownership split. A single Developer should own code-coupled changes. Parallelize only disjoint work that can be independently reviewed and verified; serialize shared writes.
+Return:
 
-When multiple implementation shapes are credible and the choice materially affects the result, compare the alternatives or build a cheap, disposable proof before committing to one. Do not create a planning artifact or abstraction layer when a short contract and direct implementation provide enough clarity.
+- A short **plan** explaining the approach and why it fits.
+- The **files to add or change**, with a reason for each.
+- The **checks** needed to prove the feature works, including important existing behavior that must still work.
+- Any open product questions or limits that block safe work.
 
-Give each assignment a self-contained brief using the handoff fields in **agents/orchestrator.md**. Pin the relevant paths, domain shape, acceptance criteria, verification commands/surface, budget, and forbidden actions.
+**Do not edit code yet.** If the feature already appears to exist, report that and ask for independent verification instead of making an unneeded change.
 
-## 3. Implement the behavior — Developer
+## 3. Approve the change scope — Orchestrator
 
-- Inspect the baseline and local conventions before editing.
-- Make the smallest change that satisfies the feature contract. Keep the domain shape explicit in the types or structure instead of scattering assumptions.
-- Add or update behavior-focused tests when appropriate. Assert outcomes a user or caller observes; avoid tests that merely mirror the implementation.
-- Keep unrelated refactors, formatting, dependency changes, and cleanup out of scope.
-- Report the exact changed paths and revision, checks actually run, evidence, risks, and anything not verified.
+Check Developer's proposed file list against the user's limits and repository rules. Approve the files Developer may edit, or ask Developer for a clearer reason. Do not choose the technical design yourself.
 
-If implementation reveals a missing product decision, a different root-cause bug, or a materially broader design, stop and return the evidence to Orchestrator for routing or a decision.
+If approval would exceed the user's permissions, ask the user first. Developer must request new scope approval **before editing any other file**.
 
-## 4. Verify the latest behavior — Tester
+## 4. Implement — Developer
 
-Tester independently checks the latest artifact against every acceptance criterion on the matching execution surface. Reuse the target project's verification commands and feature map where present. With the Codex adapter, read `.agents/skills/devkit-verify/SKILL.md` and the matching completed feature document before running the scenario; `feature.template.md` is not a test case. Capture the exact revision, environment, actions/commands, outcomes, and artifacts.
+Prepare a safe Git workspace as required by `agents/developer.md`. Work only within the approved scope.
 
-**PASS** requires evidence of the requested observable behavior. Type checks, source inspection, or a green test unrelated to the acceptance criteria are not enough. If the real surface or required data is unavailable, report **BLOCKED** with the missing prerequisite. Do not imply a manual or simulated check was automated.
+Implement the agreed behavior with the smallest clear change. Add or update useful tests for success, failure, and edge cases where relevant. Avoid unrelated changes and new layers without a need.
 
-## 5. Review the latest change — Reviewer
+Run initial checks. Report the exact changed version, file list, test commands and results, checks not run, and known risks. **Developer's own tests are not independent approval.**
 
-After Tester passes, review the exact latest diff for contract coverage, correctness, regressions, security or data risks relevant to the feature, scope, and test quality. Report only specific, actionable findings with location, severity, evidence, and smallest required action. Do not edit the patch.
+## 5. Verify the feature — Tester
 
-## 6. Correct and stop — Orchestrator
+Check the **latest target version** against the acceptance checks, independently from Developer.
 
-Return a verified failure or blocking finding to Developer with its evidence. After any material edit, rerun affected Tester verification and review on the new artifact. Do not repeat an unchanged failed approach without a new reason that can add information.
+Use the real UI, API, CLI, library, or service that the feature affects when available. Check important error cases and nearby behavior that might break. Record the environment, inputs, expected and actual results, and any checks not run.
 
-Continue only while an authorized, useful next step remains and the agreed resource budget allows it. Stop when acceptance is met, the next useful action is unavailable, a product decision is needed, or the budget is exhausted. Never weaken acceptance criteria to force a pass.
+Return `PASS`, `FAIL`, or `BLOCKED` for the test stage, with evidence. Do not call an unavailable check a pass. If there was no code change because the feature seems to exist already, verify the current behavior against the same acceptance checks.
 
-## Final outcome and report
+## 6. Review the change — Reviewer
 
-- **COMPLETED / FEATURE_DELIVERED:** Latest artifact meets the feature contract on the relevant surface and the required review has no unresolved blocking finding.
-- **BLOCKED / IMPLEMENTATION_BLOCKED:** Scope, access, tool, environment, or verification prevents responsible completion.
-- **BLOCKED / VERIFICATION_INCONCLUSIVE:** Available checks do not distinguish whether the requested behavior works.
-- **NEEDS_HUMAN / DECISION_REQUIRED:** A product or authorization decision is required.
+After Tester returns `PASS`, review the **same exact version** and its full diff. Check correctness, important risks, approved scope, and test quality. Report `PASS`, `FAIL`, or `BLOCKED` with supported findings.
 
-Report the feature contract; repository and artifact revision; changed paths; Tester evidence and surface; Reviewer result; commands/checks actually run and not run; remaining risks; and PR link only if one was actually created. Do not merge or deploy unless the user and platform explicitly authorize it.
+Skip this step if no code changed. Do not use review as a replacement for Tester's behavior checks.
+
+## 7. Handle results and stop — Orchestrator
+
+- **Tester `FAIL` or blocking Reviewer finding:** Send the evidence to Developer for a focused correction. Approve any needed new file scope first.
+- **Code changes again:** Repeat affected Tester checks and the review on the new version. Old `PASS` results may no longer apply.
+- **Required check cannot run:** Ask the responsible agent for a safe recovery. Otherwise report a blocker, not success.
+- Allow up to **two code-correction rounds after the first implementation**. Stop when the work is verified, the limit is reached, no useful safe step remains, or a product decision is needed.
+
+## Final result — Orchestrator
+
+| Result | Meaning |
+| --- | --- |
+| `COMPLETED / IMPLEMENTED` | The latest implementation passed independent behavior checks and code review. |
+| `COMPLETED / ALREADY_PRESENT` | The requested behavior was already present and independently verified; no code changed. |
+| `BLOCKED / CHECKS_FAILED` | A required test or review still fails after the allowed corrections. |
+| `BLOCKED / INCONCLUSIVE` | Evidence is not enough to confirm the requested behavior. |
+| `BLOCKED / ENVIRONMENT_BLOCKED` | Required tools, environment, or access are not available. |
+| `NEEDS_HUMAN / DECISION_REQUIRED` | A product decision or new permission is needed. |
+
+Report the requested behavior, what changed (or why no change was needed), approved file scope, exact version checked, Tester and Reviewer results, tests not run, remaining risks, and a PR link only if one exists.
+
+**Safety:** Do not merge, deploy, delete important data, or change protected systems without the required permission. A passing build alone does not prove the feature works.
