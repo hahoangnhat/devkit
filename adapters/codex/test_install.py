@@ -51,6 +51,18 @@ class InstallTests(unittest.TestCase):
             self.assertIn("UNSUPPORTED_WORKFLOW", text)
             self.assertIn("suggest a workflow or the next step", text)
 
+    def test_orchestrator_subagent_lifecycle_instructions_installed(self):
+        install(self.repo)
+        instructions = (self.repo / ".devkit/agents/orchestrator.md").read_text()
+        for rule in (
+            "Start a fresh subagent for each new task by default",
+            "Reuse an open subagent",
+            "collect its report and evidence",
+            "close_agent",
+            "Before the final report",
+        ):
+            self.assertIn(rule, instructions)
+
     def test_reinstall_overwrites_custom_devkit_files(self):
         install(self.repo)
         role = self.repo / ".devkit/agents/developer.md"
@@ -126,3 +138,36 @@ class InstallTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Symlink"):
             install(self.repo)
         self.assertEqual([], list(outside.iterdir()))
+
+    def test_directory_collision_refused_before_changes(self):
+        path = self.repo / ".codex/agents/devkit_tester.toml"
+        path.mkdir(parents=True)
+        with self.assertRaisesRegex(ValueError, "regular file"):
+            install(self.repo)
+        self.assertFalse((self.repo / "AGENTS.md").exists())
+
+    def test_root_override_rejected(self):
+        (self.repo / "AGENTS.override.md").write_text("override")
+        with self.assertRaisesRegex(ValueError, "AGENTS.override.md"):
+            install(self.repo)
+
+    def test_atomic_write_failure_keeps_old_file(self):
+        install(self.repo)
+        relative = Path(".devkit/agents/developer.md")
+        target = self.repo / relative
+        target.write_text("local change")
+        files = expected_files()
+        with mock.patch("install.os.replace", side_effect=OSError("simulated failure")):
+            with self.assertRaisesRegex(OSError, "simulated failure"):
+                install(self.repo)
+        self.assertEqual("local change", target.read_text())
+        self.assertEqual([], list(target.parent.glob(".devkit-*")))
+
+    def test_review_workflow_uses_safe_checkout(self):
+        workflow = (Path(__file__).resolve().parents[2] / "workflows/review-change.md").read_text()
+        self.assertIn("temporary checkout or detached worktree", workflow)
+        self.assertIn("Do not switch the user's current branch", workflow)
+
+
+if __name__ == "__main__":
+    unittest.main()

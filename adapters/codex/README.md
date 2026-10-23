@@ -94,6 +94,8 @@ For a real Fix Bug test when you're ready, ask:
 
 In Codex CLI, `/subagents` shows spawned agent threads. If no subagents appear when explicitly requested, verify project trust, that `agents.enabled` has not been disabled, and that the Codex version supports project-scoped `.codex/agents/*.toml`.
 
+**Subagent lifecycle:** Devkit starts fresh specialists by default, passes earlier reports to later tasks, and uses Codex `close_agent` after collecting each completed agent's results. Reuse is reserved for live state that is hard to transfer. Use `/subagents` to inspect active or completed threads; closing is done by the Orchestrator, not the installer.
+
 ## Safety and limits
 
 - Rerunning the installer updates Devkit-managed files unconditionally; it **overwrites local changes** in `.devkit/agents/`, `.devkit/workflows/` and `.codex/agents/devkit_*.toml`. Use `--check` to preview paths that will change. Back up custom edits or keep them in Git before reinstalling.

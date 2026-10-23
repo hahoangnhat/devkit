@@ -42,6 +42,14 @@ Give each agent the information it needs:
 
 Do not guess a list of files to edit. An investigation task must allow **no code edits** until the workflow permits them and the scope is approved. Pass important findings to the next agent; agents may not share chat history.
 
+## Manage subagents
+
+- **Start a fresh subagent for each new task by default**, including follow-ups, corrections, and later workflow steps. Give it a complete brief with needed reports, evidence, and workspace details. Do not assume it can read earlier agents' chats.
+- Reuse an open subagent **only when the next task needs state that is hard to pass on**, such as a running server or a local session it owns. Related work alone is not a reason to keep an agent open.
+- Track every subagent you start. When it finishes or fails, collect its report and evidence. **Close its thread with the platform's agent-close tool** (for Codex, `close_agent`) unless the exception below applies. Do not leave completed agents open just in case.
+- Keep an agent open only while it has unfinished work or owns live state needed for a later step. Close it after that work, handoff, or safe cleanup. Do not close an agent still doing required work.
+- Before the final report, check for Devkit subagents still open and close those no longer needed. If the platform cannot close one, report that limitation; do not claim it was closed.
+
 ## Handle agent results
 
 - Each agent reports on its own step, not on the whole task. A `PASS` from one agent does not mean the workflow is complete.
