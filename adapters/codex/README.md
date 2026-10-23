@@ -22,14 +22,14 @@ git commit -m "Add Devkit Codex instructions"
 
 If Devkit was already committed to `develop`, do not create an extra commit. Use your normal branch and review process to land later updates on `develop`. Do not make task worktrees from a branch that lacks these files.
 
-To preview and apply updates **after a manifest-backed installation**, run the installer from the updated Devkit source checkout:
+During Devkit development, rerun **the same install command** to copy your latest Devkit source:
 
 ```sh
-python3 adapters/codex/install.py --check --update /absolute/path/to/your-repo
-python3 adapters/codex/install.py --update /absolute/path/to/your-repo
+python3 adapters/codex/install.py --check /absolute/path/to/your-repo
+python3 adapters/codex/install.py /absolute/path/to/your-repo
 ```
 
-The installer records installed file hashes in `.devkit/codex-install.json`. It updates only files still matching the last installed version, preserves other `AGENTS.md` content, and refuses user-edited managed files. Review and commit updated files before making new worktrees. Older installations without this manifest can add it by rerunning the installer **only if their files already match the current source**; otherwise update the conflicting files manually first.
+**Rerunning install replaces Devkit-managed Markdown and TOML files**, even if you edited them locally. The installer replaces only the marked Devkit section in `AGENTS.md` and keeps other project instructions. Commit the Devkit files to `develop` before creating task worktrees.
 
 The installer copies only the necessary Markdown and generates small Codex TOML files. Each specialist TOML tells Codex to **read its role Markdown at task start**, instead of storing a second copy of the full instructions:
 
@@ -37,7 +37,6 @@ The installer copies only the necessary Markdown and generates small Codex TOML 
 your-repo/
 ├── AGENTS.md                     # adds a marked Devkit section; keeps existing content
 ├── .devkit/
-│   ├── codex-install.json          # installer record for safe updates
 │   ├── agents/
 │   │   ├── orchestrator.md
 │   │   ├── tester.md
@@ -97,14 +96,12 @@ In Codex CLI, `/subagents` shows spawned agent threads. If no subagents appear w
 
 ## Safety and limits
 
-- Installer is **idempotent**: rerunning on unchanged files is a no-op. Use `--check` to preview and `--update` to replace only previously installed files that have not been edited locally. It keeps unrelated `AGENTS.md` content and refuses conflicts. There is no `--force` flag.
-- It will fail if the root has `AGENTS.override.md`, since Codex would ignore the root `AGENTS.md`. Resolve manually for now.
-- It does **not** change `.codex/config.toml`, model selections, approvals, or sandbox settings. Subagents inherit permissions from the main Codex session. **Read-only instructions for Tester and Reviewer are not a technical read-only sandbox**: use appropriate project permissions and review changes yourself.
-- **One role source:** `.devkit/agents/*.md` is the source of truth after installation. A new subagent reads its own role Markdown at task start. Changes to role Markdown do not require regenerating TOML, but do not change an already-running agent. This file-read behavior still needs a real Codex end-to-end check.
-- **Existing installations:** Older `devkit_*.toml` files may contain an embedded copy of role instructions. Review and replace those three files with the new generated loader TOMLs once; the installer will not silently overwrite them.
-- Installation and updates write staged files and replace each file atomically. If a normal write fails midway, the installer attempts to restore earlier changes. This is **not** a crash-proof transaction; keep the files in Git and review your changes. No automatic uninstall is provided.
-- Existing Devkit files installed before the manifest was introduced cannot be overwritten safely by `--update` without a known old version. Update conflicts manually once, then rerun to record the current installation.
-- It does not install missing external tools or guarantee the target app can run. The workflow must report `BLOCKED` when tests or runtime surfaces are unavailable.
-- This adapter is **Draft**, not production-validated. Integration on a real repository is still required.
+- Rerunning the installer updates Devkit-managed files unconditionally; it **overwrites local changes** in `.devkit/agents/`, `.devkit/workflows/` and `.codex/agents/devkit_*.toml`. Use `--check` to preview paths that will change. Back up custom edits or keep them in Git before reinstalling.
+- Other project files are untouched. In `AGENTS.md`, only the block between `<!-- devkit:codex:start -->` and `<!-- devkit:codex:end -->` is replaced. Broken or duplicate markers cause an error rather than risking unrelated instructions.
+- The installer refuses symlinks on paths it manages and will not replace a directory. Existing `AGENTS.override.md` requires manual integration because it hides root `AGENTS.md`.
+- It does **not** change `.codex/config.toml`, model choices, approval policy or sandbox settings. Subagents inherit permissions from the main Codex session. Tester/Reviewer read-only rules are instructions, not a technical sandbox.
+- `.devkit/agents/*.md` remains the source of truth. The generated TOML asks each specialist to read its role Markdown at task start. Changes to role Markdown do not affect an already-running agent. This still needs a Codex end-to-end test.
+- Files are replaced atomically **one at a time**. A failed run may leave a partly updated installation; rerun the same command to finish. The script does not provide rollback or uninstall.
+- The target application and external tools must be prepared separately. Devkit remains **Draft**, not production-validated.
 
 Reference: [Codex subagents](https://developers.openai.com/codex/subagents) and [AGENTS.md](https://developers.openai.com/codex/guides/agents-md).

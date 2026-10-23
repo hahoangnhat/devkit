@@ -4,8 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
-import json
 import os
 import stat
 from pathlib import Path
@@ -19,7 +17,6 @@ SUBAGENTS = ("tester", "developer", "reviewer")
 WORKFLOW_FILES = ("README.md", "fix-bug.md", "investigate.md", "implement-feature.md", "review-change.md", "refactor.md", "maintenance.md")
 BEGIN = "<!-- devkit:codex:start -->"
 END = "<!-- devkit:codex:end -->"
-MANIFEST = Path(".devkit/codex-install.json")
 
 
 def toml_str(value: str) -> str:
@@ -87,217 +84,91 @@ def expected_files() -> dict[Path, str]:
     return files
 
 
-def digest(content: bytes | str) -> str:
-    if isinstance(content, str):
-        content = content.encode("utf-8")
-    return hashlib.sha256(content).hexdigest()
-
-
-def read_manifest(repo: Path) -> dict | None:
-    path = repo / MANIFEST
-    if not path.exists():
-        return None
-    if not path.is_file():
-        raise ValueError(f"Not a regular file: {path}")
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-        raise ValueError(f"Invalid Devkit install manifest: {path}") from exc
-    if not isinstance(data, dict) or data.get("version") != 1 or not isinstance(data.get("files"), dict):
-        raise ValueError(f"Unsupported Devkit install manifest: {path}")
-    hashes = data["files"]
-    if not isinstance(data.get("agents_block"), str) or any(
-        not isinstance(name, str) or not isinstance(value, str)
-        or len(value) != 64 or not all(c in "0123456789abcdef" for c in value)
-        or Path(name).is_absolute() or ".." in Path(name).parts
-        or not (name.startswith(".devkit/") or name.startswith(".codex/agents/"))
-        for name, value in hashes.items()
-    ):
-        raise ValueError("Invalid managed-file hashes in Devkit install manifest")
-    if len(data["agents_block"]) != 64 or not all(c in "0123456789abcdef" for c in data["agents_block"]):
-        raise ValueError("Invalid AGENTS.md hash in Devkit install manifest")
-    return data
-
-
-def merge_agents(existing: str, previous_hash: str | None = None, update: bool = False) -> str:
+def merge_agents(existing: str) -> str:
+    """Replace only the marked Devkit block; keep other AGENTS.md content."""
     starts, ends = existing.count(BEGIN), existing.count(END)
     if starts or ends:
-        if starts != 1 or ends != 1 or existing.index(BEGIN) > existing.index(END):
-            raise ValueError("AGENTS.md contains incomplete or duplicated Devkit markers")
-        begin = existing.index(BEGIN)
-        end = existing.index(END) + len(END)
-        current_block = existing[begin:end]
-        if current_block != AGENTS_SECTION:
-            if not (update and previous_hash and digest(current_block) == previous_hash):
-                raise ValueError("AGENTS.md has a modified/older Devkit block; refusing to overwrite it")
-            return existing[:begin] + AGENTS_SECTION + existing[end:]
-        return existing
-    if previous_hash:
-        raise ValueError("AGENTS.md Devkit block was removed; refusing to restore it silently")
+        if starts != 1 or ends != 1 or existing.index(BEGIN) >= existing.index(END):
+            raise ValueError("AGENTS.md has missing or duplicate Devkit markers")
+        before, rest = existing.split(BEGIN, 1)
+        _, after = rest.split(END, 1)
+        return before + AGENTS_SECTION + after
     if existing and not existing.endswith("\n"):
         existing += "\n"
     return existing + ("\n" if existing else "") + AGENTS_SECTION + "\n"
 
 
-def assert_no_symlinks(root: Path, relative: Path) -> None:
-    cur = root
+def check_path(repo: Path, relative: Path) -> Path:
+    """Never follow symlinks or overwrite a directory."""
+    dest = repo
     for part in relative.parts:
-        cur /= part
-        if cur.is_symlink():
-            raise ValueError(f"Symlink in managed path: {cur}")
+        dest /= part
+        if dest.is_symlink():
+            raise ValueError(f"Symlink in Devkit path: {dest}")
+    if dest.exists() and not dest.is_file():
+        raise ValueError(f"Not a regular file: {dest}")
+    return dest
 
 
-def apply_changes(repo: Path, changes: list[tuple[Path, bytes, bytes | None]]) -> None:
-    """Stage files first, then replace atomically per file; undo completed writes on error."""
-    staged: dict[Path, Path] = {}
-    completed: list[tuple[Path, bytes | None]] = []
-    created_dirs: set[Path] = set()
-    modes = {dest: stat.S_IMODE(dest.stat().st_mode) if dest.exists() else None for dest, _, _ in changes}
-    current_umask = os.umask(0)
-    os.umask(current_umask)
-    new_mode = 0o666 & ~current_umask
-
-    def stage(dest: Path, data: bytes, mode: int | None = None) -> Path:
-        fd, name = tempfile.mkstemp(prefix=f".{dest.name}.devkit-", dir=dest.parent)
-        path = Path(name)
-        try:
-            with os.fdopen(fd, "wb") as f:
-                os.fchmod(f.fileno(), new_mode if mode is None else mode)
-                f.write(data)
-                f.flush()
-                os.fsync(f.fileno())
-            return path
-        except BaseException:
-            path.unlink(missing_ok=True)
-            raise
-
+def write_file(dest: Path, content: bytes) -> None:
+    """Replace one file atomically (not an all-files transaction)."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    original_mode = stat.S_IMODE(dest.stat().st_mode) if dest.exists() else None
+    fd, name = tempfile.mkstemp(prefix=".devkit-", dir=dest.parent)
+    temp = Path(name)
     try:
-        for dest, content, _ in changes:
-            missing = []
-            parent = dest.parent
-            while parent != repo and not parent.exists():
-                missing.append(parent)
-                parent = parent.parent
-            assert_no_symlinks(repo, dest.relative_to(repo))
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            created_dirs.update(missing)
-            staged[dest] = stage(dest, content, modes[dest])
-
-        for dest, _, old in changes:
-            # Do not overwrite changes made between preflight and commit.
-            current = dest.read_bytes() if dest.exists() else None
-            if current != old:
-                raise ValueError(f"File changed during install: {dest}")
-            os.replace(staged[dest], dest)
-            del staged[dest]
-            completed.append((dest, old))
-    except BaseException as error:
-        rollback_errors = []
-        for dest, old in reversed(completed):
-            try:
-                if old is None:
-                    dest.unlink()
-                else:
-                    restore = stage(dest, old, modes[dest])
-                    try:
-                        os.replace(restore, dest)
-                    finally:
-                        restore.unlink(missing_ok=True)
-            except OSError as exc:
-                rollback_errors.append(f"{dest}: {exc}")
-        if rollback_errors:
-            raise OSError("Install failed; manual recovery required for: " + "; ".join(rollback_errors)) from error
-        raise
+        with os.fdopen(fd, "wb") as output:
+            output.write(content)
+        if original_mode is not None:
+            temp.chmod(original_mode)
+        else:
+            temp.chmod(0o644)
+        os.replace(temp, dest)
     finally:
-        for temp in staged.values():
-            temp.unlink(missing_ok=True)
-        for path in sorted(created_dirs, key=lambda x: len(x.parts), reverse=True):
-            try:
-                path.rmdir()
-            except OSError:
-                pass
+        temp.unlink(missing_ok=True)
 
 
-def install(repo: Path, check: bool = False, update: bool = False) -> None:
+def install(repo: Path, check: bool = False) -> None:
     repo = repo.expanduser().resolve()
     if not repo.is_dir() or not (repo / ".git").exists():
-        raise ValueError(f"Expected the Git repository root containing .git: {repo}")
+        raise ValueError(f"Expected a Git repository root containing .git: {repo}")
     if (repo / "AGENTS.override.md").exists():
-        raise ValueError("Repository has AGENTS.override.md: Codex ignores root AGENTS.md; integrate instructions manually")
+        raise ValueError("AGENTS.override.md hides AGENTS.md; integrate Devkit manually")
 
-    assert_no_symlinks(repo, MANIFEST)
-    manifest = read_manifest(repo)
     wanted = expected_files()
-    old_files = manifest["files"] if manifest else {}
-    for old_name, old_hash in old_files.items():
-        relative = Path(old_name)
-        assert_no_symlinks(repo, relative)
-        dest = repo / relative
-        if not dest.is_file() or digest(dest.read_bytes()) != old_hash:
-            raise ValueError(f"Managed file changed since installation: {dest}; refusing to overwrite")
-        if relative not in wanted:
-            raise ValueError(f"Old managed file is no longer in Devkit: {dest}; update manually")
+    agents_file = check_path(repo, Path("AGENTS.md"))
+    existing = agents_file.read_text(encoding="utf-8") if agents_file.exists() else ""
+    wanted[Path("AGENTS.md")] = merge_agents(existing)
 
-    agents_file = repo / "AGENTS.md"
-    assert_no_symlinks(repo, Path("AGENTS.md"))
-    try:
-        existing_agents = agents_file.read_text(encoding="utf-8") if agents_file.exists() else ""
-    except UnicodeDecodeError as exc:
-        raise ValueError("AGENTS.md is not UTF-8") from exc
-    wanted[Path("AGENTS.md")] = merge_agents(
-        existing_agents, manifest["agents_block"] if manifest else None, update=update
-    )
+    changes = []
+    for relative, text in wanted.items():
+        dest = check_path(repo, relative)
+        content = text.encode("utf-8")
+        if not dest.exists() or dest.read_bytes() != content:
+            changes.append((dest, content))
 
-    # A manifest records the last installed content, not a user's later edits.
-    recorded = {
-        "version": 1,
-        "files": {str(path): digest(content) for path, content in wanted.items() if path != Path("AGENTS.md")},
-        "agents_block": digest(AGENTS_SECTION),
-    }
-    wanted[MANIFEST] = json.dumps(recorded, indent=2, sort_keys=True) + "\n"
-
-    changes: list[tuple[Path, bytes, bytes | None]] = []
-    for relative, content in wanted.items():
-        assert_no_symlinks(repo, relative)
-        dest = repo / relative
-        if dest.exists() and not dest.is_file():
-            raise ValueError(f"Existing path is not a regular file: {dest}")
-        old = dest.read_bytes() if dest.exists() else None
-        new = content.encode("utf-8")
-        if old == new:
-            continue
-        if old is not None:
-            if relative == Path("AGENTS.md"):
-                pass  # Only the exact managed block may change; merge_agents checked it.
-            elif relative == MANIFEST:
-                if manifest is None or not update:
-                    raise ValueError(f"Install manifest differs: {dest}; use --update")
-            elif not (update and str(relative) in old_files):
-                raise ValueError(f"Conflict: {dest}; no files installed. Use --update for unchanged Devkit files")
-        changes.append((dest, new, old))
-
-    if not changes:
-        print(f"Devkit Codex adapter already installed: {repo}")
-        return
     if check:
-        print(f"Safe to {'update' if update else 'install'} in {repo}. Would create/update:")
-        for dest, _, _ in changes:
-            print("  " + str(dest.relative_to(repo)))
+        print(f"Devkit install preview for {repo}:")
+        for dest, _ in changes:
+            print("  Write: " + str(dest.relative_to(repo)))
+        if not changes:
+            print("  Already up to date")
         return
-    apply_changes(repo, changes)
-    print(f"{'Updated' if update else 'Installed'} Devkit Codex adapter in {repo} ({len(changes)} files).")
-    print("Commit the installed Devkit files to develop before making task worktrees.")
+
+    for dest, content in changes:
+        write_file(dest, content)
+    print(f"Devkit installed in {repo} ({len(changes)} files written).")
+    print("Commit the Devkit files to develop before creating task worktrees.")
     print("Start a new Codex session and prompt: Use Devkit to <describe your task>.")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("repository", type=Path, help="Path to target Git repository root")
-    parser.add_argument("--check", action="store_true", help="Validate the installation without writing")
-    parser.add_argument("--update", action="store_true", help="Update only unchanged, previously managed Devkit files")
+    parser.add_argument("repository", type=Path, help="Target Git repository root")
+    parser.add_argument("--check", action="store_true", help="Preview writes without changing files")
     args = parser.parse_args()
     try:
-        install(args.repository, args.check, args.update)
+        install(args.repository, check=args.check)
     except (OSError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
