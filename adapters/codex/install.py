@@ -15,6 +15,7 @@ DEVKIT_ROOT = Path(__file__).resolve().parents[2]
 ROLE_FILES = ("orchestrator", "tester", "developer", "reviewer")
 SUBAGENTS = ("tester", "developer", "reviewer")
 WORKFLOW_FILES = ("README.md", "fix-bug.md", "investigate.md", "implement-feature.md", "review-change.md", "refactor.md", "maintenance.md")
+SKILL_NAMES = ("setup-verification",)
 BEGIN = "<!-- devkit:codex:start -->"
 END = "<!-- devkit:codex:end -->"
 
@@ -80,6 +81,8 @@ def expected_files() -> dict[Path, str]:
         files[Path(".devkit/agents") / f"{role}.md"] = (DEVKIT_ROOT / "agents" / f"{role}.md").read_text(encoding="utf-8")
     for name in WORKFLOW_FILES:
         files[Path(".devkit/workflows") / name] = (DEVKIT_ROOT / "workflows" / name).read_text(encoding="utf-8")
+    for name in SKILL_NAMES:
+        files[Path(".agents/skills") / name / "SKILL.md"] = (DEVKIT_ROOT / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
     for role in SUBAGENTS:
         files[Path(".codex/agents") / f"devkit_{role}.toml"] = role_toml(role)
     return files

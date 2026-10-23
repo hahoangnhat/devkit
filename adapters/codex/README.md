@@ -1,6 +1,6 @@
 # Devkit Codex adapter — first integration (Draft)
 
-This is a **project-scoped installer**, not a new agent runtime. Codex is the runtime: the **main chat** acts as Orchestrator via `AGENTS.md` and uses native Codex custom agents for Tester, Developer and Reviewer. The canonical Markdown instructions remain in `devkit/agents/` and `devkit/workflows/`.
+This is a **project-scoped installer**, not a new agent runtime. Codex is the runtime: the **main chat** acts as Orchestrator via `AGENTS.md` and uses native Codex custom agents for Tester, Developer and Reviewer. The canonical Markdown instructions remain in `devkit/agents/` and `devkit/workflows/`. The reusable setup skill lives in `devkit/skills/setup-verification/`.
 
 ## Install into a real repository
 
@@ -16,7 +16,7 @@ python3 adapters/codex/install.py /absolute/path/to/your-repo
 
 ```sh
 cd /absolute/path/to/your-repo
-git add AGENTS.md .devkit .codex/agents
+git add AGENTS.md .devkit .codex/agents .agents/skills/setup-verification
 git commit -m "Add Devkit Codex instructions"
 ```
 
@@ -31,7 +31,7 @@ python3 adapters/codex/install.py /absolute/path/to/your-repo
 
 **Rerunning install replaces Devkit-managed Markdown and TOML files**, even if you edited them locally. The installer replaces only the marked Devkit section in `AGENTS.md` and keeps other project instructions. Commit the Devkit files to `develop` before creating task worktrees.
 
-The installer copies only the necessary Markdown and generates small Codex TOML files. Each specialist TOML tells Codex to **read its role Markdown at task start**, instead of storing a second copy of the full instructions:
+The installer copies only the necessary Markdown and one reusable skill, and generates small Codex TOML files. Each specialist TOML tells Codex to **read its role Markdown at task start**, instead of storing a second copy of the full instructions:
 
 ```text
 your-repo/
@@ -50,6 +50,10 @@ your-repo/
 │       ├── review-change.md
 │       ├── refactor.md
 │       └── maintenance.md
+├── .agents/
+│   └── skills/
+│       └── setup-verification/
+│           └── SKILL.md
 └── .codex/
     └── agents/
         ├── devkit_tester.toml
@@ -88,6 +92,12 @@ For maintenance, ask:
 
 > Use Devkit to update [docs/tests/dependency/tool] for [specific goal]. Keep the change small and check the relevant results. Do not merge or deploy.
 
+To establish runtime verification on a runnable project, ask:
+
+> Use Devkit Maintenance and the `setup-verification` skill to set up reliable verification for [app]. Prefer the project's existing tools, prove one real user path, and have Tester independently check the result. Do not change application behavior.
+
+The installed `setup-verification` skill is a **setup procedure**, not a test tool. It may create project-owned `.agents/skills/verify-<app>/` instructions and tests after scope approval. Those generated skills are **not managed or overwritten by the Devkit installer**. If the project has no runnable behavior yet, the skill reports `NOT_READY` rather than inventing a feature map.
+
 For a real Fix Bug test when you're ready, ask:
 
 > Use Devkit to investigate and fix this bug: [steps, observed behavior, expected behavior, environment]. Delegate to devkit_tester, devkit_developer and devkit_reviewer only when their stages are justified by the workflow. Do not merge or deploy.
@@ -113,7 +123,7 @@ Use `gh pr view` when a PR already exists; never open a duplicate. These are exa
 
 ## Safety and limits
 
-- Rerunning the installer updates Devkit-managed files unconditionally; it **overwrites local changes** in `.devkit/agents/`, `.devkit/workflows/` and `.codex/agents/devkit_*.toml`. Use `--check` to preview paths that will change. Back up custom edits or keep them in Git before reinstalling.
+- Rerunning the installer updates Devkit-managed files unconditionally; it **overwrites local changes** in `.devkit/agents/`, `.devkit/workflows/`, `.agents/skills/setup-verification/` and `.codex/agents/devkit_*.toml`. Use `--check` to preview paths that will change. Back up custom edits or keep them in Git before reinstalling.
 - Other project files are untouched. In `AGENTS.md`, only the block between `<!-- devkit:codex:start -->` and `<!-- devkit:codex:end -->` is replaced. Broken or duplicate markers cause an error rather than risking unrelated instructions.
 - The installer refuses symlinks on paths it manages and will not replace a directory. Existing `AGENTS.override.md` requires manual integration because it hides root `AGENTS.md`.
 - It does **not** change `.codex/config.toml`, model choices, approval policy or sandbox settings. Subagents inherit permissions from the main Codex session. Tester/Reviewer read-only rules are instructions, not a technical sandbox.

@@ -93,6 +93,44 @@ class InstallTests(unittest.TestCase):
         self.assertIn("do not create commits, branches, worktrees, or PRs", (root / "investigate.md").read_text())
         self.assertIn("Do not edit code, create commits or task branches, create a new PR", (root / "review-change.md").read_text())
 
+    def test_installs_native_setup_verification_skill(self):
+        install(self.repo)
+        skill = self.repo / ".agents/skills/setup-verification/SKILL.md"
+        text = skill.read_text(encoding="utf-8")
+        self.assertTrue(text.startswith("---\nname: setup-verification\ndescription: "))
+        for required in (
+            "## 1. Inspect before changing anything",
+            "NOT_READY",
+            "Orchestrator's scope approval",
+            ".agents/skills/verify-<app>/SKILL.md",
+            "Launch → Doctor → Drive one mapped feature → Capture evidence → Cleanup",
+            "independent Tester checks",
+        ):
+            self.assertIn(required, text)
+        self.assertFalse((self.repo / ".agents/skills/verify-app").exists())
+
+    def test_reinstall_updates_devkit_skill_but_preserves_project_skill(self):
+        install(self.repo)
+        managed = self.repo / ".agents/skills/setup-verification/SKILL.md"
+        project_skill = self.repo / ".agents/skills/verify-myapp/SKILL.md"
+        project_skill.parent.mkdir(parents=True)
+        project_skill.write_text("project-owned instructions\n")
+        managed.write_text("custom local Devkit instructions\n")
+        install(self.repo)
+        self.assertEqual(expected_files()[Path(".agents/skills/setup-verification/SKILL.md")], managed.read_text())
+        self.assertEqual("project-owned instructions\n", project_skill.read_text())
+
+    def test_rejects_symlink_in_skill_path_before_changes(self):
+        outside = Path(self.tmp.name) / "external-skills"
+        outside.mkdir()
+        parent = self.repo / ".agents"
+        parent.mkdir()
+        (parent / "skills").symlink_to(outside, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "Symlink"):
+            install(self.repo)
+        self.assertEqual([], list(outside.iterdir()))
+        self.assertFalse((self.repo / "AGENTS.md").exists())
+
     def test_reinstall_overwrites_custom_devkit_files(self):
         install(self.repo)
         role = self.repo / ".devkit/agents/developer.md"

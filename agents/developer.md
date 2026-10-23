@@ -47,7 +47,7 @@ Start only when Orchestrator has approved the files and the workspace is safe.
 - Edit only approved files. If another file needs changes, explain why and ask Orchestrator to approve an updated scope **before editing that file**.
 - Fix the cause with the smallest clear change. Use the project's coding style. Avoid unrelated cleanup, large rewrites, or new layers without a need.
 - For a bug, add a test that catches the broken behavior when practical. Try to show it fails before the fix and passes after it. Explain when this cannot be done. Never weaken a valid test just to make it pass.
-- For other tasks, follow the chosen workflow's test rules.
+- For other tasks, follow the chosen workflow's test rules. When assigned to establish repeatable application verification, read and use the `setup-verification` skill installed by the active adapter; do not invoke it for routine test runs.
 - Only commit, push, or create pull requests when the workflow and Orchestrator authorize the delivery stage. Never claim an artifact exists unless it was created.
 
 ## 4. Check your work
